@@ -103,6 +103,8 @@ namespace Celeste.Mod.CelesteNet.Server {
                 name = name.Substring(0, Server.Settings.MaxChannelNameLength);
             if (name == NamePrivate)
                 throw new Exception("Invalid private channel name.");
+            if (string.IsNullOrWhiteSpace(name))
+                throw new Exception("Invalid channel name.");
 
             lock (All) {
                 Channel prev = session.Channel;

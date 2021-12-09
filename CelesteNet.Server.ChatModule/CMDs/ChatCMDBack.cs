@@ -13,11 +13,16 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ChatCMDBack : ChatCMD {
 
-        public override string Args => "";
-
         public override string Info => "Teleport to where you were before your last teleport.";
 
-        public override void ParseAndRun(ChatCMDEnv env) {
+        public override void Init(ChatModule chat) {
+            Chat = chat;
+
+            ArgParser parser = new(chat, this);
+            ArgParsers.Add(parser);
+        }
+
+        public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
             CelesteNetPlayerSession? self = env.Session;
             if (self == null || env.Player == null)
                 throw new Exception("Are you trying to TP as the server?");

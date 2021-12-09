@@ -18,8 +18,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
     public class ChatCMDChannelChat : ChatCMD {
 
-        public override string Args => "<text>";
-
         public override string Info => "Send a whisper to everyone in the channel or toggle auto channel chat.";
 
         public override string Help =>
@@ -27,14 +25,20 @@ $@"Send a whisper to everyone in the channel or toggle auto channel chat.
 To send a message in the channel, {Chat.Settings.CommandPrefix}{ID} message here
 To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
 
-        public override void ParseAndRun(ChatCMDEnv env) {
+        public override void Init(ChatModule chat) {
+            Chat = chat;
+
+            ArgParser parser = new(chat, this);
+            parser.AddParameter(new ParamString(chat, null, ParamFlags.Optional));
+            ArgParsers.Add(parser);
+        }
+
+        public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
             CelesteNetPlayerSession? session = env.Session;
             if (session == null)
                 return;
 
-            string text = env.Text.Trim();
-
-            if (string.IsNullOrEmpty(text)) {
+            if (args.Count == 0 || args[0].Type != ChatCMDArgType.String || args[0].String.IsNullOrEmpty()) {
                 if (env.Server.UserData.GetKey(session.UID).IsNullOrEmpty())
                     throw new Exception("You must be registered to enable / disable auto channel chat mode!");
 
@@ -55,7 +59,7 @@ To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
                 Targets = others.Select(p => p.PlayerInfo).Where(p => p != null).ToArray(),
 #pragma warning restore CS8619
                 Tag = $"channel {channel.Name}",
-                Text = text,
+                Text = args[0].String,
                 Color = Chat.Settings.ColorWhisper
             });
 
@@ -64,7 +68,7 @@ To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
 
             if (player != null) {
                 env.Msg.Tag = $"channel {channel.Name}";
-                env.Msg.Text = text;
+                env.Msg.Text = args[0].String;
                 env.Msg.Color = Chat.Settings.ColorWhisper;
                 Chat.ForceSend(env.Msg);
             }

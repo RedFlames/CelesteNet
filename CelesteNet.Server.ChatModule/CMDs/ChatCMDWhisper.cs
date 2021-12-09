@@ -18,7 +18,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
     public class ChatCMDWhisper : ChatCMD {
 
-        public override string Args => "<user> <text>";
+        //public override string Args => "<user> <text>";
 
         public override string Info => "Send a whisper to someone else or toggle whispers.";
 
@@ -26,6 +26,18 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 $@"Send a whisper to someone else or toggle whispers.
 To send a whisper to someone, {Chat.Settings.CommandPrefix}{ID} user text
 To enable / disable whispers being sent to you, {Chat.Settings.CommandPrefix}{ID}";
+
+        public override void Init(ChatModule chat) {
+            Chat = chat;
+
+            ArgParser parser = new(chat, this);
+            parser.AddParameter(new ParamPlayerSession(chat));
+            parser.AddParameter(new ParamString(chat));
+            ArgParsers.Add(parser);
+
+            parser = new(chat, this);
+            ArgParsers.Add(parser);
+        }
 
         public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
             if (args.Count == 0) {

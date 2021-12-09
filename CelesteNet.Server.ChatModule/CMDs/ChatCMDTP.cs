@@ -13,22 +13,26 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ChatCMDTP : ChatCMD {
 
-        public override string Args => "<player>";
-
         public override string Info => "Teleport to another player.";
 
-        public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
+        private CelesteNetPlayerSession? Other;
+        private DataPlayerInfo? OtherPlayer;
+        private DataPlayerState? OtherState;
+
+        public override void Init(ChatModule chat) {
+            Chat = chat;
+
+            ArgParser parser = new(chat, this);
+            parser.AddParameter(new ParamPlayerSession(chat, ValidatePlayerSession));
+            ArgParsers.Add(parser);
+        }
+
+        private void ValidatePlayerSession(string raw, ChatCMDEnv env, ChatCMDArg arg) {
             CelesteNetPlayerSession? self = env.Session;
             if (self == null || env.Player == null)
                 throw new Exception("Are you trying to TP as the server?");
 
-            if (args.Count == 0)
-                throw new Exception("No username.");
-
-            if (args.Count > 1)
-                throw new Exception("Invalid username or ID.");
-
-            CelesteNetPlayerSession? other = args[0].Session;
+            CelesteNetPlayerSession? other = arg.Session;
             DataPlayerInfo otherPlayer = other?.PlayerInfo ?? throw new Exception("Invalid username or ID.");
 
             if (!env.Server.UserData.Load<TPSettings>(other.UID).Enabled)
@@ -42,14 +46,25 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
                 otherState.SID.IsNullOrEmpty())
                 throw new Exception($"{otherPlayer.DisplayName} isn't in-game.");
 
-            DataChat? msg = env.Send($"Teleporting to {otherPlayer.DisplayName}");
+            Other = other;
+            OtherPlayer = otherPlayer;
+            OtherState = otherState;
+        }
+
+        public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
+            CelesteNetPlayerSession? self = env.Session;
+
+            if (self == null || Other == null || OtherPlayer == null || OtherState == null)
+                throw new ArgumentNullException("This shouldn't happen, if ArgTypePlayerSession parsed successfully...");
+
+            DataChat? msg = env.Send($"Teleporting to {OtherPlayer.DisplayName}");
 
             self.Request<DataSession>(400,
                 (con, session) => self.WaitFor<DataPlayerFrame>(400,
-                    (con, frame) => SaveAndTeleport(env, msg, self, other, otherPlayer, otherState, session, frame.Position),
-                    () => SaveAndTeleport(env, msg, self, other, otherPlayer, otherState, session, null)
+                    (con, frame) => SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, session, frame.Position),
+                    () => SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, session, null)
                 ),
-                () => SaveAndTeleport(env, msg, self, other, otherPlayer, otherState, null, null)
+                () => SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, null, null)
             );
         }
 
@@ -112,8 +127,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
     public class ChatCMDTPOn : ChatCMD {
 
-        public override string Args => "";
-
         public override string Info => "Allow others to teleport to you.";
 
         public override void ParseAndRun(ChatCMDEnv env) {
@@ -132,8 +145,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     }
 
     public class ChatCMDTPOff : ChatCMD {
-
-        public override string Args => "";
 
         public override string Info => "Prevent others from teleporting to you.";
 

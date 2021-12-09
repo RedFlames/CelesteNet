@@ -61,9 +61,11 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 #pragma warning disable CS8618 // Set manually after construction.
         public ChatModule Chat;
 #pragma warning restore CS8618
+
+        public List<ArgParser> ArgParsers = new();
+
         public virtual string ID => GetType().Name.Substring(7).ToLowerInvariant();
 
-        public abstract string Args { get; }
         public abstract string Info { get; }
         public virtual string Help => Info;
         public virtual int HelpOrder => 0;
@@ -76,37 +78,25 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
         }
 
         public virtual void ParseAndRun(ChatCMDEnv env) {
-            // TODO: Improve or rewrite. This comes from GhostNet, which adopted it from disbot (0x0ade's C# Discord bot).
+            Exception? caught = null;
 
-            string raw = env.FullText;
-
-            int index = Chat.Settings.CommandPrefix.Length + ID.Length - 1; // - 1 because next space required
-            List<ChatCMDArg> args = new();
-            while (
-                index + 1 < raw.Length &&
-                (index = raw.IndexOf(' ', index + 1)) >= 0
-            ) {
-                int next = index + 1 < raw.Length ? raw.IndexOf(' ', index + 1) : -2;
-                if (next < 0)
-                    next = raw.Length;
-
-                int argIndex = index + 1;
-                int argLength = next - index - 1;
-
-                // + 1 because space
-                args.Add(new ChatCMDArg(env).Parse(raw, argIndex, argLength));
-
-                // Parse a split up range (with spaces) into a single range arg
-                if (args.Count >= 3 &&
-                    args[args.Count - 3].Type == ChatCMDArgType.Int &&
-                    (args[args.Count - 2].String == "-" || args[args.Count - 2].String == "+") &&
-                    args[args.Count - 1].Type == ChatCMDArgType.Int
-                ) {
-                    args.Add(new ChatCMDArg(env).Parse(raw, args[args.Count - 3].Index, next - args[args.Count - 3].Index));
-                    args.RemoveRange(args.Count - 4, 3);
-                    continue;
+            foreach (ArgParser parser in ArgParsers) {
+                try {
+                    ParseAndRun(env, parser);
+                    return;
+                } catch(Exception e) {
+                    Logger.Log(LogLevel.DEV, "ChatCMD", $"ParseAndRun exception caught: {e.Message}");
+                    caught = e;
                 }
             }
+
+            throw caught ?? new Exception("How did we get here");
+        }
+
+        public virtual void ParseAndRun(ChatCMDEnv env, ArgParser parser) {
+            string raw = env.FullText.Substring(Chat.Settings.CommandPrefix.Length + ID.Length);
+
+            List<ChatCMDArg> args = parser.Parse(raw, env);
 
             Run(env, args);
         }
@@ -117,8 +107,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     }
 
     public class ChatCMDArg {
-
-        public ChatCMDEnv Env;
 
         public string RawText = "";
         public string String = "";
@@ -136,82 +124,56 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
         public int IntRangeMin => Math.Min(IntRangeFrom, IntRangeTo);
         public int IntRangeMax => Math.Max(IntRangeFrom, IntRangeTo);
 
-        public CelesteNetPlayerSession? Session {
-            get {
-                if (Type == ChatCMDArgType.Int || Type == ChatCMDArgType.Long) {
-                    if (Env.Chat.Server.PlayersByID.TryGetValue((uint) Long, out CelesteNetPlayerSession? session))
-                        return session;
-                }
+        public CelesteNetPlayerSession? Session;
+        public ListSnapshot<Channel>? ChannelList;
+        public Channel? Channel;
 
-                using (Env.Chat.Server.ConLock.R())
-                    return
-                        Env.Chat.Server.Sessions.FirstOrDefault(session => session.PlayerInfo?.FullName == String) ??
-                        Env.Chat.Server.Sessions.FirstOrDefault(session => session.PlayerInfo?.FullName.StartsWith(String, StringComparison.InvariantCultureIgnoreCase) ?? false);
-            }
+        public ChatCMDArg(int val) {
+            Int = val;
+            Type = ChatCMDArgType.Int;
+        }
+        public ChatCMDArg(int start, int end) {
+            Int = start;
+            IntRangeFrom = start;
+            IntRangeTo = end;
+            Type = ChatCMDArgType.IntRange;
         }
 
-        public ChatCMDArg(ChatCMDEnv env) {
-            Env = env;
+        public ChatCMDArg(float val) {
+            Float = val;
+            Type = ChatCMDArgType.Float;
         }
 
-        public virtual ChatCMDArg Parse(string raw, int index) {
-            RawText = raw;
-            if (index < 0 || raw.Length <= index) {
-                String = "";
-                Index = 0;
-                return this;
-            }
-            String = raw.Substring(index);
-            Index = index;
-
-            return Parse();
-        }
-        public virtual ChatCMDArg Parse(string raw, int index, int length) {
-            RawText = raw;
-            String = raw.Substring(index, length);
-            Index = index;
-
-            return Parse();
+        public ChatCMDArg(long val) {
+            Long = val;
+            Type = ChatCMDArgType.Long;
         }
 
-        public virtual ChatCMDArg Parse() {
-            // TODO: Improve or rewrite. This comes from GhostNet, which adopted it from disbot (0x0ade's C# Discord bot).
+        public ChatCMDArg(ulong val) {
+            ULong = val;
+            Type = ChatCMDArgType.ULong;
+        }
 
-            if (int.TryParse(String, out Int)) {
-                Type = ChatCMDArgType.Int;
-                Long = IntRangeFrom = IntRangeTo = Int;
-                ULong = (ulong) Int;
+        public ChatCMDArg(int val, ListSnapshot<Channel> channels) {
+            Int = val;
+            Type = ChatCMDArgType.ChannelPage;
+            ChannelList = channels;
+        }
 
-            } else if (long.TryParse(String, out Long)) {
-                Type = ChatCMDArgType.Long;
-                ULong = (ulong) Long;
+        public ChatCMDArg(string name, Channel? channel) {
+            String = name;
+            Type = ChatCMDArgType.ChannelName;
+            Channel = channel;
+        }
 
-            } else if (ulong.TryParse(String, out ULong)) {
-                Type = ChatCMDArgType.ULong;
+        public ChatCMDArg(CelesteNetPlayerSession? val) {
+            Session = val;
+            Type = ChatCMDArgType.PlayerSession;
+        }
 
-            } else if (float.TryParse(String, out Float)) {
-                Type = ChatCMDArgType.Float;
-            }
-
-            if (Type == ChatCMDArgType.String) {
-                string[] split;
-                int from, to;
-                if ((split = String.Split('-')).Length == 2) {
-                    if (int.TryParse(split[0].Trim(), out from) && int.TryParse(split[1].Trim(), out to)) {
-                        Type = ChatCMDArgType.IntRange;
-                        IntRangeFrom = from;
-                        IntRangeTo = to;
-                    }
-                } else if ((split = String.Split('+')).Length == 2) {
-                    if (int.TryParse(split[0].Trim(), out from) && int.TryParse(split[1].Trim(), out to)) {
-                        Type = ChatCMDArgType.IntRange;
-                        IntRangeFrom = from;
-                        IntRangeTo = from + to;
-                    }
-                }
-            }
-
-            return this;
+        public ChatCMDArg(string val) {
+            String = val;
+            Type = ChatCMDArgType.String;
         }
 
         public string Rest => RawText.Substring(Index);
@@ -232,6 +194,10 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
         ULong,
 
         Float,
+
+        PlayerSession,
+        ChannelName,
+        ChannelPage
     }
 
     public class ChatCMDEnv {

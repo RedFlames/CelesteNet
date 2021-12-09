@@ -19,7 +19,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
     public class ChatCMDGlobalChat : ChatCMD {
 
-        public override string Args => "<text>";
+        //public override string Args => "<text>";
 
         public override string Info => "Send a message to everyone in the server.";
 
@@ -28,15 +28,21 @@ $@"Send a message to everyone in the server.
 To send a message, {Chat.Settings.CommandPrefix}{ID} message here
 To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
 
-        public override void ParseAndRun(ChatCMDEnv env) {
+        public override void Init(ChatModule chat) {
+            Chat = chat;
+
+            ArgParser parser = new(chat, this);
+            parser.AddParameter(new ParamString(chat, null, ParamFlags.Optional));
+            ArgParsers.Add(parser);
+        }
+
+        public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
             CelesteNetPlayerSession? session = env.Session;
             if (session == null)
                 return;
 
-            string text = env.Text.Trim();
-
-            if (string.IsNullOrEmpty(text)) {
-                Chat.Commands.Get<ChatCMDChannelChat>().ParseAndRun(env);
+            if (args.Count == 0 || string.IsNullOrEmpty(args[0].String)) {
+                Chat.Commands.Get<ChatCMDChannelChat>().Run(env, args);
                 return;
             }
 
@@ -46,13 +52,13 @@ To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
 
             DataChat? msg = Chat.PrepareAndLog(null, new DataChat {
                 Player = player,
-                Text = text
+                Text = args[0].String
             });
 
             if (msg == null)
                 return;
 
-            env.Msg.Text = text;
+            env.Msg.Text = args[0].String;
             env.Msg.Tag = "";
             env.Msg.Color = Color.White;
             env.Msg.Target = null;

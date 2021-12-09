@@ -23,6 +23,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 #pragma warning disable CS8618 // Set on init.
         public SpamContext BroadcastSpamContext;
         public ChatCommands Commands;
+        //public ChatArguments Args;
 #pragma warning restore CS8618
 
         public override void Init(CelesteNetServerModuleWrapper wrapper) {
@@ -30,6 +31,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
             BroadcastSpamContext = new(this);
             Commands = new(this);
+            //Args = new(this);
             Server.OnSessionStart += OnSessionStart;
             using (Server.ConLock.R())
                 foreach (CelesteNetPlayerSession session in Server.Sessions)

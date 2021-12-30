@@ -18,9 +18,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     }
 
     public class ChatCMDGlobalChat : ChatCMD {
-
-        //public override string Args => "<text>";
-
         public override string Info => "Send a message to everyone in the server.";
 
         public override string Help =>
@@ -32,7 +29,7 @@ To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
             Chat = chat;
 
             ArgParser parser = new(chat, this);
-            parser.AddParameter(new ParamString(chat, null, ParamFlags.Optional));
+            parser.AddParameter(new ParamString(chat, null, ParamFlags.Optional), "message");
             ArgParsers.Add(parser);
         }
 

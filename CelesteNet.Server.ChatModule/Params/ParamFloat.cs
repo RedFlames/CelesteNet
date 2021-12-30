@@ -14,7 +14,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamFloat : Param {
 
         public override string Help => "A floating-point value";
-        protected override string PlaceholderName => "float";
+        public override string PlaceholderName { get; set; } = "float";
         public float Min, Max;
 
         public ParamFloat(ChatModule chat, Action<string, ChatCMDEnv, ChatCMDArg>? validate = null, ParamFlags flags = ParamFlags.None,

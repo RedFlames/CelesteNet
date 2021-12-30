@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamInt : Param {
         public override string Help => "An integer value";
-        protected override string PlaceholderName => "int";
+        public override string PlaceholderName { get; set; } = "int";
         public override string ExampleValue => $"{(Min == int.MinValue? -999 : Min + (Max == int.MaxValue? 9999 : Max)/2):D}";
         public int Min, Max;
 

@@ -17,9 +17,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     }
 
     public class ChatCMDChannel : ChatCMD {
-
-        //public override string Args => "[page] | [channel]";
-
         public override string Info => "Switch to a different channel.";
         public override string Help =>
 $@"Switch to a different channel.

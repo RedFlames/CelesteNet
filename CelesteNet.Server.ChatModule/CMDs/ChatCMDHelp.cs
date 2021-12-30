@@ -16,9 +16,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
     }
     public class ChatCMDHelp : ChatCMD {
-
-        //public override string Args => "[page] | [command]";
-
         public override string Info => "Get help on how to use commands.";
         public override string Help =>
 $@"List all commands with {Chat.Settings.CommandPrefix}{ID} [page number]
@@ -38,7 +35,7 @@ Show help on a command with {Chat.Settings.CommandPrefix}{ID} <cmd>
             ArgParsers.Add(parser);
 
             parser = new(chat, this);
-            parser.AddParameter(new ParamString(chat, null, ParamFlags.None, 0, @"[^0-9]+"));
+            parser.AddParameter(new ParamString(chat, null, ParamFlags.None, 0, @"[^0-9]+"), "command");
             ArgParsers.Add(parser);
         }
 

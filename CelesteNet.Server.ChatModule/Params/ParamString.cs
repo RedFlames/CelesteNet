@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamString : Param {
         public override string Help => "A string" + (maxLength > 0 ? $" (max. {maxLength} characters)" : "");
-        protected override string PlaceholderName => "string"; 
+        public override string PlaceholderName { get; set; } = "string";
         public override string ExampleValue => "Text";
         public int maxLength;
         public Regex? Re;

@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamLong : Param {
         public override string Help => "A long (integer) value";
-        protected override string PlaceholderName => "long";
+        public override string PlaceholderName { get; set; } = "long";
         public override string ExampleValue => Max.ToString();
         public long Min, Max;
 

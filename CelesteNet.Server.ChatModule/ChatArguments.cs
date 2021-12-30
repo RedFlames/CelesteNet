@@ -11,24 +11,6 @@ using Microsoft.Xna.Framework;
 
 namespace Celeste.Mod.CelesteNet.Server.Chat {
 
-    /*public class ChatArguments {
-
-        public readonly List<Type> All = new();
-
-        public ChatArguments() {
-            foreach (Type type in CelesteNetUtils.GetTypes()) {
-                if (!typeof(ArgType).IsAssignableFrom(type) || type.IsAbstract)
-                    continue;
-
-                Logger.Log(LogLevel.VVV, "chatargs", $"Found arg parser: ({type.FullName})");
-                All.Add(type);
-            }
-
-            All = All.OrderBy(t => t.GetProperty("ParseOrder").GetConstantValue()).ToList();
-        }
-
-    }*/
-
     public class ArgParser {
         public readonly ChatModule Chat;
         public readonly ChatCMD Cmd;
@@ -36,6 +18,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
         public bool AllOptional => Parameters.TrueForAll((Param a) => { return a.isOptional; });
         public int NeededParamCount => Parameters.Count(p => !p.isOptional);
         public bool NoParse => Parameters.Count == 0;
+        public bool IgnoreExtra = true;
         public int HelpOrder = 0;
 
         // Only accepts one ArgType parser per position,
@@ -53,10 +36,15 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
             Delimiters = delimiters ?? new char[] { ' ' };
         }
 
-        public void AddParameter(Param p) {
+        public void AddParameter(Param p, string? placeholder = null) {
             Param prev;
             if (!p.isOptional && Parameters.Count > 0 && (prev = Parameters.Last()).isOptional)
                 throw new Exception($"Parameter {p.Help} of {Cmd.ID} must be Optional after {prev.Help} (flags = {prev.Flags})");
+
+            if (!placeholder.IsNullOrEmpty()) {
+                p.PlaceholderName = placeholder;
+            }
+
             Parameters.Add(p);
         }
 
@@ -65,20 +53,30 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
             raw = raw.Trim();
 
-            if ((raw.IsNullOrEmpty() && AllOptional))
+            Logger.Log(LogLevel.DEV, "argparse", $"Running '{raw}' through parser with {Parameters.Count} / np: {NoParse} / ie: {IgnoreExtra}");
+
+            if (raw.IsNullOrEmpty() && AllOptional)
                 return values;
 
             if (NoParse) {
+                if (!IgnoreExtra && !raw.IsNullOrEmpty()) {
+                    throw new Exception($"Too many parameters given: '{raw}'.");
+                }
                 values.Add(new ChatCMDArg(raw));
                 return values;
             }
 
             Logger.Log(LogLevel.DEV, "argparse", $"Parsing '{raw}'...");
 
-            int from, to = -1, p;
+            string extraArguments = "";
 
-            for(p = 0; p < Parameters.Count; p++) {
-                Param param = Parameters[p];
+            int from, to = -1, p;
+            for(p = 0; p < Parameters.Count + 1; p++) {
+                Param? param = null;
+
+                if (p < Parameters.Count) {
+                    param = Parameters[p];
+                }
 
                 if ((from = to + 1) >= raw.Length) {
                     break;
@@ -94,8 +92,13 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
                 string rawValue = raw.Substring(argIndex, argLength).Trim();
 
-                Logger.Log(LogLevel.DEV, $"argparse{p}", $"Looking for param {p} {param.Placeholder} at {argIndex}+{argLength}.");
+                Logger.Log(LogLevel.DEV, $"argparse{p}", $"Looking for param {p} {param?.Placeholder} at {argIndex}+{argLength}.");
                 Logger.Log(LogLevel.DEV, $"argparse{p}", $"Substring is '{rawValue}'.");
+
+                if (p == Parameters.Count) {
+                    extraArguments = rawValue;
+                    break;
+                }
 
                 // detect spaced out ranges
                 if (param is ParamIntRange && raw[to] == ' ') {
@@ -117,17 +120,20 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
                     Logger.Log(LogLevel.DEV, $"argparse{p}", $"{param.GetType()}.TryParse returned {arg.GetType().FullName} {arg.RawText} {arg.String}.");
                     values.Add(arg);
                 } else {
-                    Logger.Log(LogLevel.DEV, $"argparse{p}", $"{param.GetType()}.TryParse failed or returened null.");
+                    Logger.Log(LogLevel.DEV, $"argparse{p}", $"{param.GetType()}.TryParse failed or returned null.");
                     break;
                 }
             }
 
-            if(raw.IsNullOrEmpty() && Parameters.Count > 0 && !Parameters[0].isOptional) {
+            if (raw.IsNullOrEmpty() && Parameters.Count > 0 && !Parameters[0].isOptional) {
                 if (Parameters[0].TryParse(raw, env, out ChatCMDArg? arg) && arg != null) {
                     values.Add(arg);
                     p = 1;
                 }
             }
+
+            if (p == Parameters.Count && !extraArguments.IsNullOrEmpty() && !IgnoreExtra)
+                throw new Exception($"Too many parameters given: '{extraArguments}'.");
 
             if (p < Parameters.Count && !Parameters[p].isOptional)
                 throw new Exception($"Necessary parameter {Parameters[p].Placeholder} not found.");
@@ -146,8 +152,20 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
         public readonly ChatModule Chat;
 
         public virtual string Help => "";
-        protected virtual string PlaceholderName => "?";
-        public virtual string Placeholder => (Flags.HasFlag(ParamFlags.Optional) ? "[" : "<") + PlaceholderName + (Flags.HasFlag(ParamFlags.Optional) ? "]" : ">");
+        public virtual string PlaceholderName { get; set; } = "?";
+        public virtual string Placeholder {
+            get {
+                if (PlaceholderName.Length > 1)
+                    if (PlaceholderName[0] == '<' || PlaceholderName[0] == '[')
+                        return PlaceholderName;
+
+                if (Flags.HasFlag(ParamFlags.Optional))
+                    return "[" + PlaceholderName + "]";
+                else
+                    return "<" + PlaceholderName + ">";
+            }
+        }
+
         public virtual string ExampleValue => "?";
 
         public readonly ParamFlags Flags = ParamFlags.None;

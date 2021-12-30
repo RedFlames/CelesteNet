@@ -14,7 +14,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamChannelName : Param {
 
         public override string Help => $"Name of {(MustExist ? "an existing" : "an existing or new")} channel";
-        protected override string PlaceholderName => "channel";
+        public override string PlaceholderName { get; set; } = "channel";
         public override string ExampleValue => "main";
 
         public bool MustExist = false;

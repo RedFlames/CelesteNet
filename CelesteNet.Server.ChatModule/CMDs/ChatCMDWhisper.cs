@@ -17,9 +17,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     }
 
     public class ChatCMDWhisper : ChatCMD {
-
-        //public override string Args => "<user> <text>";
-
         public override string Info => "Send a whisper to someone else or toggle whispers.";
 
         public override string Help =>
@@ -31,15 +28,18 @@ To enable / disable whispers being sent to you, {Chat.Settings.CommandPrefix}{ID
             Chat = chat;
 
             ArgParser parser = new(chat, this);
-            parser.AddParameter(new ParamPlayerSession(chat));
-            parser.AddParameter(new ParamString(chat));
+            parser.IgnoreExtra = false;
             ArgParsers.Add(parser);
 
             parser = new(chat, this);
+            parser.AddParameter(new ParamPlayerSession(chat));
+            parser.AddParameter(new ParamString(chat), "message");
             ArgParsers.Add(parser);
         }
 
         public override void Run(ChatCMDEnv env, List<ChatCMDArg> args) {
+            Logger.Log(LogLevel.DEV, "whisper", $"Run with '{args.Count}' arguments: {args}");
+
             if (args.Count == 0) {
                 CelesteNetPlayerSession? session = env.Session;
                 if (session == null)

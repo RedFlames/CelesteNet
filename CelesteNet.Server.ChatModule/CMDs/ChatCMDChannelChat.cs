@@ -29,7 +29,7 @@ To enable / disable auto channel chat mode, {Chat.Settings.CommandPrefix}{ID}";
             Chat = chat;
 
             ArgParser parser = new(chat, this);
-            parser.AddParameter(new ParamString(chat, null, ParamFlags.Optional));
+            parser.AddParameter(new ParamString(chat, null, ParamFlags.Optional), "message");
             ArgParsers.Add(parser);
         }
 

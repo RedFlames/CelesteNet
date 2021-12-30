@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamPlayerSession : Param {
         public override string Help => $"An {(IngameOnly ? "in-game" : "online")} player";
-        protected override string PlaceholderName => "player";
+        public override string PlaceholderName => "player";
         public override string ExampleValue => "Madeline";
         public bool IngameOnly = false;
 

@@ -14,7 +14,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     public class ParamHelpPage : Param {
 
         public override string Help => "Page number of command list";
-        protected override string PlaceholderName => "page";
+        public override string PlaceholderName { get; set; } = "page";
         public override string ExampleValue => "1";
 
         public ParamHelpPage(ChatModule chat, Action<string, ChatCMDEnv, ChatCMDArg>? validate = null, ParamFlags flags = ParamFlags.None) : base(chat, validate, flags) {

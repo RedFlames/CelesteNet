@@ -78,19 +78,31 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
         }
 
         public virtual void ParseAndRun(ChatCMDEnv env) {
-            Exception? caught = null;
+            List<Exception> caught = new();
 
             foreach (ArgParser parser in ArgParsers) {
                 try {
                     ParseAndRun(env, parser);
                     return;
                 } catch(Exception e) {
-                    Logger.Log(LogLevel.DEV, "ChatCMD", $"ParseAndRun exception caught: {e.Message}");
-                    caught = e;
+                    Logger.Log(LogLevel.DEV, "ChatCMD", $"ParseAndRun exception caught: {e.Message} ({ArgParsers.IndexOf(parser)})");
+                    caught.Add(e);
                 }
             }
 
-            throw caught ?? new Exception("How did we get here");
+            if (caught.Count == 0) {
+                env.Error(new Exception("Could not parse command."));
+                return;
+            }
+
+            IEnumerable<Exception> cmd_exceptions = caught.Where((e) => { return e.GetType() == typeof(Exception); });
+
+            if(cmd_exceptions.Any())
+                caught = cmd_exceptions.ToList();
+
+            foreach (Exception e in caught) {
+                env.Error(e);
+            }
         }
 
         public virtual void ParseAndRun(ChatCMDEnv env, ArgParser parser) {

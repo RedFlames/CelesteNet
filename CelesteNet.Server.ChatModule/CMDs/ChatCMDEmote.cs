@@ -17,9 +17,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
     }
 
     public class ChatCMDEmote : ChatCMD {
-
-        //public override string Args => "<text> | i:<img> | p:<img> | g:<img>";
-
         public override string Info => "Send an emote appearing over your player.";
         public override string Help =>
 @"Send an emote appearing over your player.
@@ -35,11 +32,7 @@ p:10 FRM1 FRM2 FRM3 plays the animation at 10 FPS.";
             Chat = chat;
 
             ArgParser parser = new(chat, this);
-            //parser.AddParameter(new ParamEmote(chat));
-            //ArgParsers.Add(parser);
-
-            //parser = new(chat, this);
-            parser.AddParameter(new ParamString(chat));
+            parser.AddParameter(new ParamString(chat), "<text> | i:<img> | p:<img> | g:<img>");
             ArgParsers.Add(parser);
         }
 

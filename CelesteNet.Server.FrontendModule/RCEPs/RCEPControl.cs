@@ -314,7 +314,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
         public static void Players(Frontend f, HttpRequestEventArgs c) {
             bool auth = f.IsAuthorized(c);
             f.RespondJSON(c, f.Server.PlayersByID.Values.Select(p => new {
-                p.SessionID,
+                ID = p.SessionID,
                 UID = auth ? p.UID : null,
                 p.PlayerInfo?.Name,
                 p.PlayerInfo?.FullName,
@@ -382,6 +382,13 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
                     Error = "No ID."
                 });
                 return;
+            }
+
+            if (!f.IsAuthorizedExec(c)) {
+                if (moduleID == f.Wrapper.ID || f.Settings.ExecOnlySettings.Contains(moduleID)) {
+                    f.Respond(c, "Unauthorized!");
+                    return;
+                }
             }
 
             CelesteNetServerModuleSettings? settings;

@@ -1,9 +1,10 @@
 using System;
 
 namespace Celeste.Mod.CelesteNet.DataTypes {
-    public class DataLowLevelSlimMap : DataType<DataLowLevelSlimMap> {
+    public class DataLowLevelCoreTypeMap : DataType<DataLowLevelCoreTypeMap> {
 
-        static DataLowLevelSlimMap() {
+        static DataLowLevelCoreTypeMap() {
+            // TODO Change this to "coreTypeMap" in the next protocol-breaking version
             DataID = "slimMap";
         }
 

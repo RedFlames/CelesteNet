@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Celeste.Mod.CelesteNet {
+namespace Celeste.Mod.CelesteNet.Server {
     public class TCPReceiverRole : NetPlusThreadRole {
 
         public interface IPoller : IDisposable {
@@ -33,15 +33,6 @@ namespace Celeste.Mod.CelesteNet {
                         // Arm the connection to be polled again
                         if (con.IsConnected)
                             Role.Poller.ArmConnectionPoll(con);
-                    } catch (Exception e) {
-                        if (e is SocketException se && se.IsDisconnect()) {
-                            Logger.Log(LogLevel.INF, "tcprecv", $"Remote of connection {con} closed the connection");
-                            con.DisposeSafe();
-                            continue;
-                        }
-
-                        Logger.Log(LogLevel.WRN, "tcprecv", $"Error while reading from connection {con}: {e}");
-                        con.DisposeSafe();
                     } finally {
                         ExitActiveZone();
                     }

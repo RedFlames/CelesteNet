@@ -45,6 +45,7 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
 
         public float GrabCooldown = 0f;
         public const float GrabCooldownMax = CelesteNetMainComponent.GrabCooldownMax;
+        public byte GrabStrength;
         protected DataPlayerGrabPlayer GrabPacket;
 
         // TODO Revert this to Queue<> once MonoKickstart weirdness is fixed
@@ -61,7 +62,7 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
             RetryPlayerSprite:
             try {
                 Sprite = new(spriteMode | (PlayerSpriteMode) (1 << 31));
-            } catch (Exception) {
+            } catch {
                 if (spriteMode != PlayerSpriteMode.Madeline) {
                     spriteMode = PlayerSpriteMode.Madeline;
                     goto RetryPlayerSprite;
@@ -74,6 +75,7 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
             Hair.Color = Player.NormalHairColor;
             Add(Leader = new(new(0f, -8f)));
             Holdable = new() {
+                OnPickup = OnPickup,
                 OnCarry = OnCarry,
                 OnRelease = OnRelease
             };
@@ -103,6 +105,10 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
             base.Removed(scene);
 
             NameTag.RemoveSelf();
+        }
+
+        public void OnPickup() {
+            GrabStrength = (byte) Calc.Random.Next(0, DataPlayerGrabPlayer.MaxGrabStrength + 1);
         }
 
         public void OnPlayer(Player player) {
@@ -142,7 +148,8 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
                 Player = client.PlayerInfo,
                 Grabbing = PlayerInfo,
                 Position = position,
-                Force = null
+                Force = null,
+                GrabStrength = GrabStrength
             };
         }
 
@@ -160,14 +167,15 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
                 Player = client.PlayerInfo,
                 Grabbing = PlayerInfo,
                 Position = Position,
-                Force = force
+                Force = force,
+                GrabStrength = 0
             };
         }
 
         public override void Update() {
             lock (UpdateQueue) {
                 IsUpdating = true;
-                for(int i = 0; i < UpdateQueue.Count; i++)
+                for (int i = 0; i < UpdateQueue.Count; i++)
                     UpdateQueue[i](this);
                 UpdateQueue.Clear();
                 IsUpdating = false;
@@ -281,7 +289,6 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
             PlayerGraphics = graphics;
 
             Depth = graphics.Depth + 1;
-            Sprite.Color = graphics.SpriteColor * Alpha;
             Sprite.Rate = graphics.SpriteRate;
 
             Sprite.HairCount = graphics.HairCount;
@@ -311,11 +318,12 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
             }
         }
 
-        public void UpdatePosition(Vector2 pos, Vector2 scale, Facings facing, Vector2 speed) {
+        public void UpdateGeneric(Vector2 pos, Vector2 scale, Color color, Facings facing, Vector2 speed) {
             if (Holdable.Holder == null)
                 Position = pos;
             Sprite.Scale = scale;
             Sprite.Scale.X *= (float) facing;
+            Sprite.Color = color * Alpha;
             Hair.Facing = facing;
             Speed = speed;
         }

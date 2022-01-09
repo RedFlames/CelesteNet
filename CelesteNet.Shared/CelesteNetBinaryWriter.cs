@@ -17,22 +17,22 @@ namespace Celeste.Mod.CelesteNet {
         public readonly DataContext Data;
 
         public OptMap<string>? Strings;
-        public OptMap<Type>? SlimMap;
+        public OptMap<Type>? CoreTypeMap;
 
         protected ConcurrentStack<Tuple<long, int>> SizeDummyStack = new();
 
-        public CelesteNetBinaryWriter(DataContext ctx, OptMap<string>? strings, OptMap<Type>? slimMap, Stream output)
+        public CelesteNetBinaryWriter(DataContext ctx, OptMap<string>? strings, OptMap<Type>? coreTypeMap, Stream output)
             : base(output, CelesteNetUtils.UTF8NoBOM) {
             Data = ctx;
             Strings = strings;
-            SlimMap = slimMap;
+            CoreTypeMap = coreTypeMap;
         }
 
-        public CelesteNetBinaryWriter(DataContext ctx, OptMap<string>? strings, OptMap<Type>? slimMap, Stream output, bool leaveOpen)
+        public CelesteNetBinaryWriter(DataContext ctx, OptMap<string>? strings, OptMap<Type>? coreTypeMap, Stream output, bool leaveOpen)
             : base(output, CelesteNetUtils.UTF8NoBOM, leaveOpen) {
             Data = ctx;
             Strings = strings;
-            SlimMap = slimMap;
+            CoreTypeMap = coreTypeMap;
         }
 
         public virtual void WriteSizeDummy(int size) {
@@ -127,11 +127,11 @@ namespace Celeste.Mod.CelesteNet {
 
         public virtual bool TryGetSlimID(Type type, out int slimID) {
             slimID = -1;
-            return SlimMap != null && SlimMap.TryMap(type, out slimID);
+            return CoreTypeMap != null && CoreTypeMap.TryMap(type, out slimID);
         }
 
         public void WriteRef<T>(T? data) where T : DataType<T>
-            => Write7BitEncodedUInt((data ?? throw new ArgumentException($"Expected {Data.DataTypeToID[typeof(T)]} to write, got null")).Get<MetaRef>(Data) ?? uint.MaxValue);
+            => Write7BitEncodedUInt(data?.Get<MetaRef>(Data) ?? throw new ArgumentException($"Expected {Data.DataTypeToID[typeof(T)]} MetaRef to write, got null"));
 
         public void WriteOptRef<T>(T? data) where T : DataType<T>
             => Write7BitEncodedUInt(data?.GetOpt<MetaRef>(Data) ?? uint.MaxValue);

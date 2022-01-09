@@ -38,9 +38,7 @@ namespace Celeste.Mod.CelesteNet.Server {
         public float NetPlusSchedulerOverloadThreshold { get; set; } = 0.8f;
         public float NetPlusSchedulerStealThreshold { get; set; } = 0.7f;
 
-        public int MainPort { get; set; } = 3802;
-        public int UDPReceivePort { get; set; } = 3803;
-        public int UDPSendPort { get; set; } = 3804;
+        public int MainPort { get; set; } = 17230;
 
         public int MaxTickRate { get; set; } = 60;
         public float TickRateLowActivityThreshold { get; set; } = 0.3f;
@@ -51,16 +49,19 @@ namespace Celeste.Mod.CelesteNet.Server {
         public float TickRateHighUDPUplinkBpSThreshold { get; set; } = 33554432; // 32 MBpS
 
         public int MaxPacketSize { get; set; } = 2048;
-        public int MaxQueueSize { get; set; } = 256;
+        public int MaxQueueSize { get; set; } = 1024;
         public float MergeWindow { get; set; } = 15;
         public int MaxHeartbeatDelay { get; set; } = 20;
         public float HeartbeatInterval { get; set; } = 250f;
 
+        public string PacketDumperDirectory { get; set; } = "packetDump";
+        public int PacketDumperMaxDumps { get; set; } = 64;
+
         public bool TCPRecvUseEPoll { get; set; } = true;
         public int TCPPollMaxEvents { get; set; } = 16;
-        public int TCPBufferSize { get; set; } = 16384;
-        public int TCPSockSendBufferSize { get; set; } = 65536;
-        public int UDPMaxDatagramSize { get; set; } = 4096;
+        public int TCPRecvBufferSize { get; set; } = 16384;
+        public int TCPSendMaxRetries { get; set; } = 8;
+        public int UDPMaxDatagramSize { get; set; } = 16384;
 
         public int UDPAliveScoreMax { get; set; } = 70;
         public int UDPDowngradeScoreMin { get; set; } = -2;
@@ -91,10 +92,11 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public bool AuthOnly { get; set; } = false;
 
+        public string MessageDiscontinue { get; set; } = "";
         public string MessageTeapotVersionMismatch { get; set; } = "Teapot version mismatch";
         public string MessageAuthOnly { get; set; } = "Server supports only authenticated clients";
         public string MessageInvalidKey { get; set; } = "Invalid key";
-        public string MessageBan { get; set; } = "Banned: {3}";
+        public string MessageBan { get; set; } = "Banned: {2}";
 
     }
 }

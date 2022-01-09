@@ -21,6 +21,8 @@ namespace Celeste.Mod.CelesteNet.Server {
         public readonly CelesteNetConnection Con;
         public readonly uint SessionID;
 
+        private int _Alive;
+        public bool Alive => Volatile.Read(ref _Alive) > 0;
         public readonly string UID, Name;
 
         private readonly RWLock StateLock = new();
@@ -40,11 +42,13 @@ namespace Celeste.Mod.CelesteNet.Server {
             Con = con;
             SessionID = sesId;
 
+            _Alive = 1;
             UID = uid;
             Name = name;
 
             Channel = server.Channels.Default;
 
+            Interlocked.Increment(ref Server.PlayerCounter);
             Con.OnSendFilter += ConSendFilter;
             Server.Data.RegisterHandlersIn(this);
         }
@@ -91,7 +95,13 @@ namespace Celeste.Mod.CelesteNet.Server {
         }
 
         internal void Start() {
-            Logger.Log(LogLevel.INF, "playersession", $"Startup #{SessionID} {Con}");
+            if (!string.IsNullOrEmpty(Server.Settings.MessageDiscontinue)) {
+                Con.Send(new DataDisconnectReason { Text = Server.Settings.MessageDiscontinue });
+                Con.Send(new DataInternalDisconnect());
+                return;
+            }
+
+            Logger.Log(LogLevel.INF, "playersession", $"Startup #{SessionID} {Con} (Session UID: {UID}; Connection UID: {Con.UID})");
 
             // Resolver player name conflicts
             string nameSpace = Name;
@@ -124,17 +134,19 @@ namespace Celeste.Mod.CelesteNet.Server {
                     // Split the avatar into fragments
                     List<DataNetEmoji> avatarFrags = new();
                     byte[] buf = new byte[Server.Settings.MaxPacketSize / 2];
-                    int fragSize;
+                    int fragSize, seqNum = 0;
                     while ((fragSize = avatarStream.Read(buf, 0, buf.Length)) > 0) {
                         byte[] frag = new byte[fragSize];
                         Buffer.BlockCopy(buf, 0, frag, 0, fragSize);
+                        if (avatarFrags.Count > 0)
+                            avatarFrags[avatarFrags.Count - 1].MoreFragments = true;
                         avatarFrags.Add(new DataNetEmoji {
                             ID = avatarId,
-                            Data = frag
+                            Data = frag,
+                            SequenceNumber = seqNum++,
+                            MoreFragments = false
                         });
                     }
-                    for (int i = 0; i < avatarFrags.Count - 1; i++)
-                        avatarFrags[i].MoreFragments = true;
 
                     // Turn avatar fragments into blobs
                     AvatarFragments = avatarFrags.Select(frag => DataInternalBlob.For(Server.Data, frag)).ToArray();
@@ -155,7 +167,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             Logger.Log(LogLevel.INF, "playersession", $"Session #{SessionID} PlayerInfo: {playerInfo}");
 
             // Send packets to players
-            DataInternalBlob blobPlayerInfo = DataInternalBlob.For(Server.Data, playerInfo)!;
+            DataInternalBlob blobPlayerInfo = DataInternalBlob.For(Server.Data, playerInfo);
 
             Con.Send(playerInfo);
             foreach (DataInternalBlob fragBlob in AvatarFragments)
@@ -283,6 +295,9 @@ namespace Celeste.Mod.CelesteNet.Server {
         public event Action<CelesteNetPlayerSession, DataPlayerInfo?>? OnEnd;
 
         public void Dispose() {
+            if (Interlocked.Exchange(ref _Alive, 0) <= 0)
+                return;
+
             Logger.Log(LogLevel.INF, "playersession", $"Shutdown #{SessionID} {Con}");
 
             DataPlayerInfo? playerInfoLast = PlayerInfo;

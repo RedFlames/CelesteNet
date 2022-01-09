@@ -27,6 +27,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public readonly DataContext Data;
         public readonly NetPlusThreadPool ThreadPool;
+        public readonly PacketDumper PacketDumper;
 
         public UserData UserData;
 
@@ -40,10 +41,11 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public readonly DetourModManager DetourModManager;
 
-        public uint PlayerCounter = 0;
+        public int PlayerCounter = 0;
         public readonly TokenGenerator ConTokenGenerator = new();
         public readonly RWLock ConLock = new();
         public readonly HashSet<CelesteNetConnection> Connections = new();
+        public readonly BlockingCollection<CelesteNetConnection> SafeDisposeQueue = new();
         public readonly HashSet<CelesteNetPlayerSession> Sessions = new();
         public readonly ConcurrentDictionary<CelesteNetConnection, CelesteNetPlayerSession> PlayersByCon = new();
         public readonly ConcurrentDictionary<uint, CelesteNetPlayerSession> PlayersByID = new();
@@ -52,7 +54,7 @@ namespace Celeste.Mod.CelesteNet.Server {
         public float CurrentTickRate { get; private set; }
         private float NextTickRate;
 
-        private readonly ManualResetEvent ShutdownEvent = new(false);
+        private readonly CancellationTokenSource ShutdownTokenSrc = new();
 
         private bool _IsAlive;
         public bool IsAlive {
@@ -60,12 +62,12 @@ namespace Celeste.Mod.CelesteNet.Server {
             set {
                 if (_IsAlive == value)
                     return;
+                if (value && ShutdownTokenSrc.IsCancellationRequested)
+                    throw new InvalidOperationException("Can't revive the server!");
 
                 _IsAlive = value;
-                if (value)
-                    ShutdownEvent.Reset();
-                else
-                    ShutdownEvent.Set();
+                if (!_IsAlive)
+                    ShutdownTokenSrc.Cancel();
             }
         }
 
@@ -102,6 +104,8 @@ namespace Celeste.Mod.CelesteNet.Server {
 
             Data = new();
             Data.RegisterHandlersIn(this);
+
+            PacketDumper = new(this);
 
             Channels = new(this);
 
@@ -164,12 +168,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             Channels.Start();
 
             IPEndPoint serverEP = new(IPAddress.IPv6Any, Settings.MainPort);
-            IPEndPoint udpRecvEP = new(IPAddress.IPv6Any, Settings.UDPReceivePort);
-            IPEndPoint udpSendEP = new(IPAddress.IPv6Any, Settings.UDPSendPort);
-
             CelesteNetTCPUDPConnection.Settings tcpUdpConSettings = new() {
-                UDPReceivePort = Settings.UDPReceivePort,
-                UDPSendPort = Settings.UDPSendPort,
                 MaxPacketSize = Settings.MaxPacketSize,
                 MaxQueueSize = Settings.MaxQueueSize,
                 MergeWindow = Settings.MergeWindow,
@@ -184,9 +183,9 @@ namespace Celeste.Mod.CelesteNet.Server {
 
             Logger.Log(LogLevel.INF, "server", $"Starting server on {serverEP}");
             ThreadPool.Scheduler.AddRole(new HandshakerRole(ThreadPool, this));
+            ThreadPool.Scheduler.AddRole(new TCPUDPSenderRole(ThreadPool, this, serverEP));
             ThreadPool.Scheduler.AddRole(new TCPReceiverRole(ThreadPool, this, (PlatformHelper.Is(MonoMod.Utils.Platform.Linux) && Settings.TCPRecvUseEPoll) ? new TCPEPollPoller() : new TCPFallbackPoller()));
-            ThreadPool.Scheduler.AddRole(new UDPReceiverRole(ThreadPool, this, udpRecvEP));
-            ThreadPool.Scheduler.AddRole(new TCPUDPSenderRole(ThreadPool, this, udpSendEP));
+            ThreadPool.Scheduler.AddRole(new UDPReceiverRole(ThreadPool, this, serverEP, ThreadPool.Scheduler.FindRole<TCPUDPSenderRole>()?.UDPSocket));
             ThreadPool.Scheduler.AddRole(new TCPAcceptorRole(ThreadPool, this, serverEP, ThreadPool.Scheduler.FindRole<HandshakerRole>()!, ThreadPool.Scheduler.FindRole<TCPReceiverRole>()!, ThreadPool.Scheduler.FindRole<UDPReceiverRole>()!, ThreadPool.Scheduler.FindRole<TCPUDPSenderRole>()!, tcpUdpConSettings));
 
             HeartbeatTimer.Start();
@@ -197,8 +196,14 @@ namespace Celeste.Mod.CelesteNet.Server {
         }
 
         public void Wait() {
-            WaitHandle.WaitAny(new WaitHandle[] { ShutdownEvent });
-            ShutdownEvent.Dispose();
+            foreach (CelesteNetConnection con in SafeDisposeQueue.GetConsumingEnumerable(ShutdownTokenSrc.Token)) {
+                if (con.IsAlive) {
+                    Logger.Log("main", $"Safe dispose triggered for connection {con}");
+                    con.Dispose();
+                }
+            }
+            ShutdownTokenSrc.Dispose();
+            SafeDisposeQueue.Dispose();
         }
 
         public void Dispose() {
@@ -293,8 +298,8 @@ namespace Celeste.Mod.CelesteNet.Server {
                         Sessions.Remove(session);
                         PlayersByCon.TryRemove(con, out _);
                         PlayersByID.TryRemove(session.SessionID, out _);
-                        session?.Dispose();
                     }
+                    session?.Dispose();
                 }
 
                 OnDisconnect?.Invoke(this, con, session);
@@ -311,8 +316,8 @@ namespace Celeste.Mod.CelesteNet.Server {
                 Sessions.Add(ses);
                 PlayersByCon[con] = ses;
                 PlayersByID[ses.SessionID] = ses;
+                ses.Start();
             }
-            ses.Start();
             OnSessionStart?.Invoke(ses);
             return ses;
         }

@@ -6,11 +6,10 @@ using System.Net.Sockets;
 using System.Threading;
 
 namespace Celeste.Mod.CelesteNet {
-    public class CelesteNetTCPUDPConnection : CelesteNetConnection {
+    public abstract class CelesteNetTCPUDPConnection : CelesteNetConnection {
 
-        public struct Settings {
+        public class Settings {
 
-            public int UDPReceivePort, UDPSendPort;
             public int MaxPacketSize, MaxQueueSize;
             public float MergeWindow;
             public int MaxHeartbeatDelay;
@@ -21,12 +20,14 @@ namespace Celeste.Mod.CelesteNet {
 
         }
 
-        private volatile bool SafeDisposed = false, SafeDisposeTriggered = false;
-        public override bool IsConnected => IsAlive && !SafeDisposed && _TCPSock.Connected;
+        public static string GetConnectionUID(IPEndPoint remoteEp) => $"con-tcpudp-{remoteEp.Address.MapToIPv6().ToString().Replace(':', '-')}";
+
+        protected volatile bool SafeDisposeTriggered = false;
+        public override bool IsConnected => IsAlive && !SafeDisposeTriggered && _TCPSock.Connected;
         public override string ID { get; }
         public override string UID { get; }
         public readonly OptMap<string> Strings = new("StringMap");
-        public readonly OptMap<Type> SlimMap = new("SlimMap");
+        public readonly OptMap<Type> CoreTypeMap = new("CoreTypeMap");
 
         public readonly uint ConnectionToken;
         public readonly Settings ConnectionSettings;
@@ -35,9 +36,9 @@ namespace Celeste.Mod.CelesteNet {
 
         private readonly Socket _TCPSock;
         private EndPoint? _UDPEndpoint;
-        private readonly CelesteNetSendQueue TCPQueue, UDPQueue;
+        public readonly CelesteNetSendQueue TCPQueue, UDPQueue;
 
-        public const int UDPPacketDropThreshold = 8;
+        public const int UDPPacketDropThreshold = 64;
         public readonly object UDPLock = new();
         private volatile int _UDPConnectionID, UDPLastConnectionID = -1;
         private volatile int _UDPMaxDatagramSize;
@@ -45,7 +46,7 @@ namespace Celeste.Mod.CelesteNet {
         private byte UDPRecvLastContainerID = 0, UDPSendNextContainerID = 0;
 
         public virtual bool UseUDP {
-            get => IsConnected && !(ConnectionSettings.UDPReceivePort <= 0 || ConnectionSettings.UDPSendPort <= 0) && UDPDeathScore < ConnectionSettings.UDPDeathScoreMax;
+            get => IsConnected && ConnectionSettings.UDPDeathScoreMax >= 0 && UDPDeathScore < ConnectionSettings.UDPDeathScoreMax;
             set => UDPDeathScore = value ? 0 : ConnectionSettings.UDPDeathScoreMax;
         }
 
@@ -53,17 +54,17 @@ namespace Celeste.Mod.CelesteNet {
 
         public virtual int UDPConnectionID => UseUDP ? _UDPConnectionID : -1;
 
-        public virtual int UDPMaxDatagramSize => UDPMaxDatagramSize;
+        public virtual int UDPMaxDatagramSize => _UDPMaxDatagramSize;
 
         public readonly object HeartbeatLock = new();
         private int TCPLastHeartbeatDelay = 0, UDPLastHeartbeatDelay = 0, TCPSendKeepAlive = 0, UDPSendKeepAlive = 0;
 
         public event Action<CelesteNetTCPUDPConnection, EndPoint>? OnUDPDeath;
 
-        public CelesteNetTCPUDPConnection(DataContext data, uint token, Settings settings, Socket tcpSock, Action<CelesteNetSendQueue> tcpQueueFlusher, Action<CelesteNetSendQueue> udpQueueFlusher) : base(data) {
-            IPEndPoint serverEp = (IPEndPoint) tcpSock.RemoteEndPoint!;
-            ID = $"TCP/UDP {serverEp.Address}:{serverEp.Port}";
-            UID = $"con-tcpudp-{BitConverter.ToString(serverEp.Address.GetAddressBytes())}-{serverEp.Port}";
+        public CelesteNetTCPUDPConnection(DataContext data, uint token, Settings settings, Socket tcpSock) : base(data) {
+            IPEndPoint remoteEp = (IPEndPoint) tcpSock.RemoteEndPoint!;
+            ID = $"TCP/UDP {remoteEp.Address}:{remoteEp.Port}";
+            UID = GetConnectionUID(remoteEp);
 
             ConnectionToken = token;
             ConnectionSettings = settings;
@@ -72,8 +73,8 @@ namespace Celeste.Mod.CelesteNet {
             _TCPSock = tcpSock;
             _UDPEndpoint = null;
             _UDPMaxDatagramSize = 0;
-            TCPQueue = new(this, "TCP Queue", settings.MaxQueueSize, settings.MergeWindow, tcpQueueFlusher);
-            UDPQueue = new(this, "UDP Queue", settings.MaxQueueSize, settings.MergeWindow, udpQueueFlusher);
+            TCPQueue = new(this, "TCP Queue", settings.MaxQueueSize, settings.MergeWindow, _ => FlushTCPQueue());
+            UDPQueue = new(this, "UDP Queue", settings.MaxQueueSize, settings.MergeWindow, _ => FlushUDPQueue());
         }
 
         protected override void Dispose(bool disposing) {
@@ -100,11 +101,12 @@ namespace Celeste.Mod.CelesteNet {
             _TCPSock.Dispose();
         }
 
-        public override void DisposeSafe() {
-            SafeDisposeTriggered = true;
-        }
+        public override void DisposeSafe() => throw new NotImplementedException();
 
         protected override CelesteNetSendQueue? GetQueue(DataType data) => (UseUDP && UDPEndpoint != null && UDPConnectionID >= 0 && (data.DataFlags & DataFlags.Unreliable) != 0) ? UDPQueue : TCPQueue;
+
+        protected abstract void FlushTCPQueue();
+        protected abstract void FlushUDPQueue();
 
         public virtual void PromoteOptimizations() {
             foreach (Tuple<string, int>? promo in Strings.PromoteRead())
@@ -113,8 +115,8 @@ namespace Celeste.Mod.CelesteNet {
                     ID = promo.Item2
                 });
 
-            foreach (Tuple<Type, int>? promo in SlimMap.PromoteRead())
-                Send(new DataLowLevelSlimMap {
+            foreach (Tuple<Type, int>? promo in CoreTypeMap.PromoteRead())
+                Send(new DataLowLevelCoreTypeMap {
                     PacketType = promo.Item1,
                     ID = promo.Item2
                 });
@@ -140,6 +142,10 @@ namespace Celeste.Mod.CelesteNet {
                         MaxDatagramSize = maxDatagramSize
                     });
 
+                // Immediatly send a keep alive
+                UDPQueue.Enqueue(new DataLowLevelKeepAlive());
+                Volatile.Write(ref UDPSendKeepAlive, 1);
+
                 Logger.Log(LogLevel.INF, "tcpudpcon", $"Initialized UDP connection of {this} [{conId} / {UDPMaxDatagramSize} / {UDPAliveScore} / {UDPDowngradeScore} / {UDPDeathScore}]");
             }
         }
@@ -161,16 +167,17 @@ namespace Celeste.Mod.CelesteNet {
             }
         }
 
-        public virtual void DecreaseUDPScore(bool downgradeImmediatly = false, string? reason = null) {
+        public virtual void DecreaseUDPScore(bool downgradeImmediately = false, string? reason = null) {
             lock (UDPLock) {
                 // Must have an initialized connection
                 if (UDPEndpoint == null)
                     return;
 
-                // Reset the alive score, half the maximum datagram size, and increment the downgrade score
-                // If it reaches it's maximum, the connection died
+                // Reset the alive score and increment the downgrade score
                 UDPAliveScore = 0;
-                if (downgradeImmediatly || ++UDPDowngradeScore >= ConnectionSettings.UDPDowngradeScoreMax) {
+                if (downgradeImmediately || ++UDPDowngradeScore > ConnectionSettings.UDPDowngradeScoreMax) {
+                    // Half the maximum datagram size
+                    // If we can't do that, the connection died
                     UDPDowngradeScore = 0;
                     Logger.Log(LogLevel.INF, "tcpudpcon", $"Downgrading UDP connection of {this}{((reason != null) ? $": {reason}" : string.Empty)} [{_UDPConnectionID} / {UDPMaxDatagramSize} / {UDPAliveScore} / {UDPDowngradeScore} / {UDPDeathScore}]");
                     if ((_UDPMaxDatagramSize /= 2) >= 1 + ConnectionSettings.MaxPacketSize) {
@@ -193,6 +200,7 @@ namespace Celeste.Mod.CelesteNet {
             lock (UDPLock) {
                 if (!UseUDP)
                     return;
+                UDPHeartbeat();
 
                 // Handle connection ID
                 // If the packet contains a negative connection ID, disable UDP
@@ -258,7 +266,7 @@ namespace Celeste.Mod.CelesteNet {
             // Increment the death score
             // If it exceeds the maximum, disable UDP
             if (increaseScore && UDPDeathScore < ConnectionSettings.UDPDeathScoreMax) {
-                if (++UDPDeathScore >= ConnectionSettings.UDPDeathScoreMax)
+                if (++UDPDeathScore > ConnectionSettings.UDPDeathScoreMax)
                     Logger.Log(LogLevel.INF, "tcpudpcon", $"Disabling UDP for connection {this} [{_UDPConnectionID} / {UDPMaxDatagramSize} / {UDPAliveScore} / {UDPDowngradeScore} / {UDPDeathScore}]");
             }
 
@@ -300,13 +308,8 @@ namespace Celeste.Mod.CelesteNet {
         }
 
         public virtual string? DoHeartbeatTick() {
-            if (!IsAlive || SafeDisposeTriggered)
+            if (!IsConnected)
                 return null;
-
-            if (SafeDisposeTriggered) {
-                SafeDisposed = true;
-                return $"Safe dispose triggered for connection {this}";
-            }
 
             lock (HeartbeatLock) {
                 // Check if we got a TCP heartbeat in the required timeframe
@@ -323,11 +326,11 @@ namespace Celeste.Mod.CelesteNet {
                     // Check if we got a UDP heartbeat in the required timeframe
                     if (Interlocked.Increment(ref UDPLastHeartbeatDelay) > ConnectionSettings.MaxHeartbeatDelay) {
                         Volatile.Write(ref UDPLastHeartbeatDelay, 0);
-                        DecreaseUDPScore(true);
+                        DecreaseUDPScore(true, reason: "No heartbeat in the required timeframe");
                     }
 
                     // Check if we need to send a UDP keep-alive
-                    if (UDPEndpoint != null && Interlocked.Exchange(ref UDPSendKeepAlive, 1) > 0)
+                    if (Interlocked.Exchange(ref UDPSendKeepAlive, 1) > 0)
                         UDPQueue.Enqueue(new DataLowLevelKeepAlive());
                 }
             }

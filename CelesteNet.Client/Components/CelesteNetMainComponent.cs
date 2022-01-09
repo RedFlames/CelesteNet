@@ -32,6 +32,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             .GetField("area", BindingFlags.NonPublic | BindingFlags.Static);
 
         private Player Player;
+        private Entity PlayerBody;
         private TrailManager TrailManager;
         private Session Session;
         private AreaKey? MapEditorArea;
@@ -80,6 +81,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     Everest.Events.Level.OnExit += OnExitLevel;
                     On.Celeste.Level.LoadNewPlayer += OnLoadNewPlayer;
                     On.Celeste.Player.Added += OnPlayerAdded;
+                    On.Celeste.Player.Die += OnPlayerDie;
                     On.Celeste.Player.ResetSprite += OnPlayerResetSprite;
                     On.Celeste.Player.Play += OnPlayerPlayAudio;
                     On.Celeste.PlayerSprite.ctor += OnPlayerSpriteCtor;
@@ -100,29 +102,34 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         protected override void Dispose(bool disposing) {
             base.Dispose(disposing);
 
-            MainThreadHelper.Do(() => {
-                On.Monocle.Scene.SetActualDepth -= OnSetActualDepth;
-                On.Celeste.Level.LoadLevel -= OnLoadLevel;
-                Everest.Events.Level.OnExit -= OnExitLevel;
-                On.Celeste.Level.LoadNewPlayer -= OnLoadNewPlayer;
-                On.Celeste.Player.Added -= OnPlayerAdded;
-                On.Celeste.Player.ResetSprite -= OnPlayerResetSprite;
-                On.Celeste.Player.Play -= OnPlayerPlayAudio;
-                On.Celeste.PlayerSprite.ctor -= OnPlayerSpriteCtor;
-                On.Celeste.PlayerHair.GetHairColor -= OnGetHairColor;
-                On.Celeste.PlayerHair.GetHairScale -= OnGetHairScale;
-                On.Celeste.PlayerHair.GetHairTexture -= OnGetHairTexture;
-                On.Celeste.TrailManager.Add_Vector2_Image_PlayerHair_Vector2_Color_int_float_bool_bool -= OnDashTrailAdd;
+            try {
+                MainThreadHelper.Do(() => {
+                    On.Monocle.Scene.SetActualDepth -= OnSetActualDepth;
+                    On.Celeste.Level.LoadLevel -= OnLoadLevel;
+                    Everest.Events.Level.OnExit -= OnExitLevel;
+                    On.Celeste.Level.LoadNewPlayer -= OnLoadNewPlayer;
+                    On.Celeste.Player.Added -= OnPlayerAdded;
+                    On.Celeste.Player.ResetSprite -= OnPlayerResetSprite;
+                    On.Celeste.Player.Play -= OnPlayerPlayAudio;
+                    On.Celeste.PlayerSprite.ctor -= OnPlayerSpriteCtor;
+                    On.Celeste.PlayerHair.GetHairColor -= OnGetHairColor;
+                    On.Celeste.PlayerHair.GetHairScale -= OnGetHairScale;
+                    On.Celeste.PlayerHair.GetHairTexture -= OnGetHairTexture;
+                    On.Celeste.TrailManager.Add_Vector2_Image_PlayerHair_Vector2_Color_int_float_bool_bool -= OnDashTrailAdd;
 
-                ILHookTransitionRoutine?.Dispose();
-                ILHookTransitionRoutine = null;
-            });
+                    ILHookTransitionRoutine?.Dispose();
+                    ILHookTransitionRoutine = null;
+                });
+            } catch (ObjectDisposedException) {
+                // It might already be too late to tell the main thread to do anything.
+            }
 
             Cleanup();
         }
 
         public void Cleanup() {
             Player = null;
+            PlayerBody = null;
             Session = null;
             WasIdle = false;
             WasInteractive = false;
@@ -130,6 +137,9 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             foreach (Ghost ghost in Ghosts.Values)
                 ghost?.RemoveSelf();
             Ghosts.Clear();
+
+            if (IsGrabbed && Player.StateMachine.State == Player.StFrozen)
+                Player.StateMachine.State = Player.StNormal;
 
             if (PlayerNameTag != null)
                 PlayerNameTag.Name = "";
@@ -225,7 +235,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 ghost = null;
             }
 
-            Level level = Player?.Scene as Level;
+            Level level = PlayerBody?.Scene as Level;
             if (ghost == null && !IsGhostOutside(Session, level, graphics.Player, out _))
                 ghost = CreateGhost(level, graphics.Player, graphics);
 
@@ -237,7 +247,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             LastFrames[frame.Player.ID] = frame;
 
             Session session = Session;
-            Level level = Player?.Scene as Level;
+            Level level = PlayerBody?.Scene as Level;
             bool outside = IsGhostOutside(session, level, frame.Player, out DataPlayerState state);
 
             if (!Ghosts.TryGetValue(frame.Player.ID, out Ghost ghost) ||
@@ -262,7 +272,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     return;
                 ghost.NameTag.Name = frame.Player.DisplayName;
                 UpdateIdleTag(ghost, ref ghost.IdleTag, state.Idle);
-                ghost.UpdatePosition(frame.Position, frame.Scale, frame.Facing, frame.Speed);
+                ghost.UpdateGeneric(frame.Position, frame.Scale, frame.Color, frame.Facing, frame.Speed);
                 ghost.UpdateAnimation(frame.CurrentAnimationID, frame.CurrentAnimationFrame);
                 ghost.UpdateHair(frame.Facing, frame.HairColors, frame.HairTexture0, frame.HairSimulateMotion);
                 ghost.UpdateDash(frame.DashWasB, frame.DashDir); // TODO: Get rid of this, sync particles separately!
@@ -443,16 +453,16 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     return;
                 }
 
-                if (ghost.Holdable.IsHeld || !ghost.Holdable.ShouldHaveGravity)
+                if ((ghost.Holdable.IsHeld || !ghost.Holdable.ShouldHaveGravity) && grab.GrabStrength < ghost.GrabStrength)
                     goto Release;
 
                 if (GrabbedBy != null && grab.Player.ID != GrabbedBy.PlayerInfo.ID)
                     goto Release;
 
-                if ((ghost.Position - player.Position).LengthSquared() > 4096f)
+                if ((ghost.Position - player.Position).LengthSquared() > 128f * 128f)
                     goto Release;
 
-                if ((grab.Position - player.Position).LengthSquared() > 4096f)
+                if ((grab.Position - player.Position).LengthSquared() > 128f * 128f)
                     goto Release;
 
                 RunOnMainThread(() => {
@@ -615,6 +625,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                 if (ready && Engine.Scene is MapEditor) {
                     Player = null;
+                    PlayerBody = null;
                     Session = null;
                     WasIdle = false;
                     WasInteractive = false;
@@ -628,6 +639,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                 if (Player != null && MapEditorArea == null) {
                     Player = null;
+                    PlayerBody = null;
                     Session = null;
                     WasIdle = false;
                     WasInteractive = false;
@@ -669,6 +681,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             if (Player == null || Player.Scene != level) {
                 Player = level.Tracker.GetEntity<Player>();
                 if (Player != null) {
+                    PlayerBody = Player;
                     Session = level.Session;
                     WasIdle = false;
                     WasInteractive = false;
@@ -746,6 +759,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 return;
 
             Player = level.Tracker.GetEntity<Player>();
+            PlayerBody = Player;
 
             SendState();
         }
@@ -776,12 +790,19 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             WasIdle = false;
             WasInteractive = false;
             Player = self;
+            PlayerBody = self;
 
             SendState();
             SendGraphics();
 
             foreach (DataPlayerFrame frame in LastFrames.Values.ToArray())
                 Handle(null, frame);
+        }
+
+        private PlayerDeadBody OnPlayerDie(On.Celeste.Player.orig_Die orig, Player self, Vector2 direction, bool evenIfInvincible, bool registerDeathInStats) {
+            PlayerDeadBody body = orig(self, direction, evenIfInvincible, registerDeathInStats);
+            PlayerBody = body ?? (Entity) self;
+            return body;
         }
 
         private void OnPlayerResetSprite(On.Celeste.Player.orig_ResetSprite orig, Player self, PlayerSpriteMode mode) {
@@ -888,7 +909,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                     Depth = player.Depth,
                     SpriteMode = player.Sprite.Mode,
-                    SpriteColor = player.Sprite.Color,
                     SpriteRate = player.Sprite.Rate,
                     SpriteAnimations = animations,
 
@@ -976,6 +996,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                     Position = player.Position,
                     Scale = player.Sprite.Scale,
+                    Color = player.Sprite.Color,
                     Facing = player.Facing,
                     Speed = player.Speed,
 

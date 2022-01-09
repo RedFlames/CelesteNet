@@ -73,7 +73,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             }
         }
 
-        public float IterateSteadyHeuristic(ref float lastVal, ref long lastUpdate, float curVal, bool update=false) {
+        public float IterateSteadyHeuristic(ref float lastVal, ref long lastUpdate, float curVal, bool update = false) {
             long curMs = RuntimeWatch.ElapsedMilliseconds;
             long cutoffMs = curMs - HeuristicSampleWindow;
             float newVal = (lastUpdate < cutoffMs) ? curVal : ((lastVal * (lastUpdate - cutoffMs) + curVal * (curMs - lastUpdate)) / HeuristicSampleWindow);
@@ -84,7 +84,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             return newVal;
         }
 
-        public float IterateEventHeuristic(ref float lastVal, ref long lastUpdate, int numEvents=0, bool update=false) {
+        public float IterateEventHeuristic(ref float lastVal, ref long lastUpdate, int numEvents = 0, bool update = false) {
             long curMs = RuntimeWatch.ElapsedMilliseconds;
             long cutoffMs = curMs - HeuristicSampleWindow;
             float newVal = (((lastUpdate < cutoffMs) ? 0 : (lastVal * (lastUpdate - cutoffMs) / 1000f)) + numEvents) / HeuristicSampleWindow * 1000f;
@@ -181,7 +181,6 @@ namespace Celeste.Mod.CelesteNet.Server {
         }
 
         private void ThreadLoop() {
-            CancellationToken? lastWorkerToken = null;
             try {
                 CancellationToken poolToken = Pool.Token;
                 poolToken.Register(() => RoleWorkerTokenSrc?.Cancel());
@@ -191,7 +190,6 @@ namespace Celeste.Mod.CelesteNet.Server {
                     // Start the worker
                     using (_RoleWorker = _Role.CreateWorker(this))
                     using (RoleWorkerTokenSrc = new()) {
-                        lastWorkerToken = RoleWorkerTokenSrc.Token;
                         RoleSwitchSem.Release();
                         try {
                             while (!RoleWorkerTokenSrc.IsCancellationRequested) {
@@ -199,6 +197,9 @@ namespace Celeste.Mod.CelesteNet.Server {
                                 if (!RoleWorkerTokenSrc.IsCancellationRequested)
                                     Logger.Log(LogLevel.WRN, "netplus", $"Thread pool thread {Index} worker {_RoleWorker} exited prematurely!");
                             }
+                        } catch (OperationCanceledException ce) {
+                            if (ce.CancellationToken != RoleWorkerTokenSrc.Token)
+                                throw;
                         } finally {
                             _RoleWorker.ActiveZoneCounter = 0;
                             _RoleWorker = null;
@@ -207,8 +208,6 @@ namespace Celeste.Mod.CelesteNet.Server {
                     }
                 }
             } catch (Exception e) {
-                if (e is OperationCanceledException ce && ce.CancellationToken == lastWorkerToken) return;
-
                 // Report error to the pool
                 Pool.ReportThreadError(this, e);
             } finally {

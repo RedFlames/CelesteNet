@@ -9,8 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -206,6 +204,18 @@ namespace Celeste.Mod.CelesteNet {
             if (!sock.Connected)
                 return;
             try {
+                // On Unix, we're supposed to shut down the socket and / or signal the recving thread.
+                // On Windows, we might need to set the recv timeout to 0 to properly cancel pending recvs.
+                switch (shutdown) {
+                    case SocketShutdown.Receive:
+                    case SocketShutdown.Both:
+                        try {
+                            sock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 0);
+                        } catch {
+                            // Not all platforms like this.
+                        }
+                        break;
+                }
                 sock.Shutdown(shutdown);
             } catch (SocketException se) {
                 // Sometime the first check isn't enough
@@ -215,32 +225,9 @@ namespace Celeste.Mod.CelesteNet {
             }
         }
 
-        private const int SOL_SOCKET = 1, SO_REUSEPORT = 15;
-        [DllImport("libc", SetLastError = true)]
-        private static extern int setsockopt(IntPtr socket, int level, int opt, [In, MarshalAs(UnmanagedType.LPArray)] int[] val, int len);
-
-        public static void EnableEndpointReuse(this Socket sock) {
-            // Set reuse address and port options (if available)
-            // We have to set SO_REUSEPORT directly though
-            sock.ExclusiveAddressUse = false;
-            switch (sock.AddressFamily) {
-                case AddressFamily.InterNetwork:
-                    sock.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ReuseAddress, true);
-                    break;
-                case AddressFamily.InterNetworkV6:
-                    sock.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ReuseAddress, true);
-                    break;
-            }
-
-            //All Unix-ish systems should have SO_REUSEPORT
-            if (MonoMod.Utils.PlatformHelper.Is(MonoMod.Utils.Platform.Unix)) {
-                if (setsockopt(sock.Handle, SOL_SOCKET, SO_REUSEPORT, new[] { 1 }, sizeof(int)) < 0)
-                    throw new SystemException($"Could not set SO_REUSEPORT: {Marshal.GetLastWin32Error()}");
-            }
-        }
-
         public static bool IsDisconnect(this SocketException se) {
             switch (se.SocketErrorCode) {
+                case SocketError.Shutdown:
                 case SocketError.NotConnected:
                 case SocketError.ConnectionRefused:
                 case SocketError.ConnectionAborted:

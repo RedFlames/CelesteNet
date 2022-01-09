@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataPlayerGrabPlayer : DataType<DataPlayerGrabPlayer> {
 
+        public const byte MaxGrabStrength = 1 << 7 - 1;
+
         static DataPlayerGrabPlayer() {
             DataID = "playerGrabPlayer";
         }
@@ -23,6 +25,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
         public DataPlayerInfo? Player, Grabbing;
         public Vector2 Position;
         public Vector2? Force;
+        public byte GrabStrength;
 
         public override bool FilterHandle(DataContext ctx)
             => Player != null && Grabbing != null; // Can be RECEIVED BY CLIENT TOO EARLY because UDP is UDP.
@@ -45,7 +48,10 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
             Player = reader.ReadRef<DataPlayerInfo>();
             Grabbing = reader.ReadOptRef<DataPlayerInfo>();
             Position = reader.ReadVector2();
-            Force = reader.ReadBoolean() ? reader.ReadVector2() : null;
+
+            byte forceStrength = reader.ReadByte();
+            Force = ((forceStrength & 0b1) != 0) ? reader.ReadVector2() : null;
+            GrabStrength = (byte) (forceStrength >> 1);
 
             Meta = GenerateMeta(reader.Data);
         }
@@ -56,9 +62,13 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
             writer.WriteRef(Player);
             writer.WriteOptRef(Grabbing);
             writer.Write(Position);
-            writer.Write(Force.HasValue);
+
+            byte forceStrength = unchecked((byte) (GrabStrength << 1));
             if (Force.HasValue)
-                writer.Write(Force.Value);
+                forceStrength |= 0b1;
+            writer.Write(forceStrength);
+            if ((forceStrength & 0b1) != 0)
+                writer.Write(Force!.Value);
         }
 
     }

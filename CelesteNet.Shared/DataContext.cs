@@ -58,8 +58,12 @@ namespace Celeste.Mod.CelesteNet {
 
         public void RescanDataTypes(Type[] types) {
             foreach (Type type in types) {
-                if (type.IsAbstract)
+                try {
+                    if (!(typeof(DataType).IsAssignableFrom(type) || typeof(MetaType).IsAssignableFrom(type)) || type.IsAbstract)
+                        continue;
+                } catch {
                     continue;
+                }
 
                 if (typeof(DataType).IsAssignableFrom(type)) {
                     RuntimeHelpers.RunClassConstructor(type.TypeHandle);
@@ -263,14 +267,14 @@ namespace Celeste.Mod.CelesteNet {
 
             DataFlags flags = (DataFlags) reader.ReadUInt16();
             if ((flags & DataFlags.InteralSlimIndicator) != 0) {
-                if (reader.SlimMap == null)
+                if (reader.CoreTypeMap == null)
                     throw new InvalidDataException("Trying to read a slim packet header without a slim map!");
 
                 int slimID = (int) (flags & ~(DataFlags.InteralSlimIndicator | DataFlags.InteralSlimBigID));
                 if ((flags & DataFlags.InteralSlimBigID) != 0)
-                    slimID |= reader.Read7BitEncodedInt() << 6;
+                    slimID |= (reader.Read7BitEncodedInt() << 14);
 
-                Type slimType = reader.SlimMap.Get(slimID);
+                Type slimType = reader.CoreTypeMap.Get(slimID);
                 if (Activator.CreateInstance(slimType) is not DataType slimData)
                     throw new InvalidDataException($"Cannot create instance of data type {slimType.FullName}");
 
@@ -314,7 +318,7 @@ namespace Celeste.Mod.CelesteNet {
                 throw new InvalidDataException($"Length mismatch for DataType '{id}' {flags} {source} {length} - got {lengthReal}");
 
             if (type != null && (flags & DataFlags.CoreType) != 0)
-                reader.SlimMap?.CountRead(type);
+                reader.CoreTypeMap?.CountRead(type);
 
             return data;
         }
@@ -354,12 +358,12 @@ namespace Celeste.Mod.CelesteNet {
                 throw new ArgumentException("Base stream isn't seekable");
             long start = writer.BaseStream.Position;
 
-            if (writer.SlimMap != null && writer.TryGetSlimID(data.GetType(), out int slimID)) {
-                if (slimID < (1<<6))
+            if (writer.TryGetSlimID(data.GetType(), out int slimID)) {
+                if (slimID < (1<<14))
                     writer.Write((ushort) (slimID | (ushort) DataFlags.InteralSlimIndicator));
                 else {
-                    writer.Write((ushort) (slimID & (1<<6 - 1) | (ushort) (DataFlags.InteralSlimIndicator | DataFlags.InteralSlimBigID)));
-                    writer.Write7BitEncodedInt(slimID >> 6);
+                    writer.Write((ushort) ((ushort) (slimID & ((1<<14) - 1)) | (ushort) (DataFlags.InteralSlimIndicator | DataFlags.InteralSlimBigID)));
+                    writer.Write7BitEncodedInt(slimID >> 14);
                 }
 
                 try {
@@ -475,24 +479,6 @@ namespace Celeste.Mod.CelesteNet {
                 if (Handlers.TryGetValue(btype, out DataHandler? handler))
                     handler(con, data);
         }
-
-
-        [Obsolete("Use CelesteNetBinaryReader instead.")]
-        public T? ReadRef<T>(BinaryReader reader) where T : DataType<T>
-            => GetRef<T>(reader.ReadUInt32());
-
-        [Obsolete("Use CelesteNetBinaryReader instead.")]
-        public T? ReadOptRef<T>(BinaryReader reader) where T : DataType<T>
-            => TryGetRef(reader.ReadUInt32(), out T? value) ? value : null;
-
-        [Obsolete("Use CelesteNetBinaryWriter instead.")]
-        public void WriteRef<T>(BinaryWriter writer, T? data) where T : DataType<T>
-            => writer.Write((data ?? throw new Exception($"Expected {DataTypeToID[typeof(T)]} to write, got null")).Get<MetaRef>(this) ?? uint.MaxValue);
-
-        [Obsolete("Use CelesteNetBinaryWriter instead.")]
-        public void WriteOptRef<T>(BinaryWriter writer, T? data) where T : DataType<T>
-            => writer.Write(data?.GetOpt<MetaRef>(this) ?? uint.MaxValue);
-
 
         public T? GetRef<T>(uint id) where T : DataType<T>
             => (T?) GetRef(DataTypeToID[typeof(T)], id);

@@ -127,6 +127,17 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             if (string.IsNullOrEmpty(text))
                 return;
 
+            if (text.StartsWith("/spectate ")) {
+                text = text.Split(' ')[1];
+
+                DataPlayerInfo[] all = Client.Data.GetRefs<DataPlayerInfo>();
+
+                DataPlayerInfo player = all.FirstOrDefault(p => p.FullName.StartsWith(text, StringComparison.InvariantCultureIgnoreCase));
+                if (!string.IsNullOrEmpty(player?.DisplayName))
+                    Context.Main.SpectateGhost(player);
+                return;
+            }
+
             lock (Log) {
                 if (Pending.ContainsKey(text))
                     return;

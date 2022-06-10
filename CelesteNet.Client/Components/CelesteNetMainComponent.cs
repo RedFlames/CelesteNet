@@ -58,6 +58,16 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         public float GrabTimeout = 0f;
         public const float GrabTimeoutMax = 0.3f;
 
+        public DataPlayerInfo Spectate;
+        public Ghost SpectateTarget;
+        public bool IsSpectating = false;
+        public bool SpectateTargetDied = false;
+        protected bool preSpectateVisible = true;
+        protected int preSpectateState = Player.StNormal;
+        protected bool preSpectateForceCameraUpdate = true;
+        protected bool preSpectateInvincible = true;
+        protected bool preSpectateInteractions = false;
+
         private Vector2? NextRespawnPosition;
 
         private ILHook ILHookTransitionRoutine;
@@ -140,6 +150,9 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
             if (IsGrabbed && Player.StateMachine.State == Player.StFrozen)
                 Player.StateMachine.State = Player.StNormal;
+
+            if (IsSpectating)
+                CancelSpectate();
 
             if (PlayerNameTag != null)
                 PlayerNameTag.Name = "";
@@ -285,6 +298,10 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 ghost.UpdateHolding((Settings.Entities & CelesteNetClientSettings.SyncMode.Receive) == 0 ? null : frame.Holding);
                 ghost.Interactive = state.Interactive;
             });
+
+            if (IsSpectating && SpectateTarget == ghost && Player != null) {
+                Player.Position = frame.Position;
+            }
         }
 
         public void Handle(CelesteNetConnection con, DataAudioPlay audio) {
@@ -447,8 +464,12 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public void Handle(CelesteNetConnection con, DataPlayerGrabPlayer grab) {
             Player player = Player;
-            if (Engine.Scene is not Level level || level.Paused || player == null || !Settings.Interactions)
+
+            if (player != null && grab.Player.ID == Client.PlayerInfo.ID || grab.Grabbing.ID == Client.PlayerInfo.ID)
                 goto Release;
+
+            if (Engine.Scene is not Level level || level.Paused || player == null || !Settings.Interactions || IsSpectating)
+                return;
 
             if (grab.Player.ID != Client.PlayerInfo.ID && grab.Grabbing.ID == Client.PlayerInfo.ID) {
                 if (GrabCooldown > 0f) {
@@ -602,6 +623,49 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             ghost?.RunOnUpdate(g => g.NameTag.Name = "");
         }
 
+        public void SpectateGhost(DataPlayerInfo info) {
+            Session session = Session;
+            Level level = PlayerBody?.Scene as Level;
+            bool outside = IsGhostOutside(session, level, info, out DataPlayerState state);
+
+            if (!Ghosts.TryGetValue(info.ID, out Ghost ghost) || level == null || outside)
+                return;
+
+            if (Player == null)
+                return;
+
+            Spectate = info;
+            SpectateTarget = ghost;
+            IsSpectating = true;
+
+            preSpectateVisible = Player.Visible;
+            preSpectateState =  Player.StateMachine.State;
+            preSpectateForceCameraUpdate =  Player.ForceCameraUpdate;
+            preSpectateInvincible =  SaveData.Instance.Assists.Invincible;
+            preSpectateInteractions = Settings.Interactions;
+
+            Player.Visible = false;
+            Player.StateMachine.State = Player.StFrozen;
+            Player.ForceCameraUpdate = true;
+            SaveData.Instance.Assists.Invincible = true;
+            Settings.Interactions = false;
+        }
+
+        protected void CancelSpectate() {
+            Spectate = null;
+            SpectateTarget = null;
+            IsSpectating = false;
+
+            if (Player == null)
+                return;
+
+            Player.Visible = preSpectateVisible;
+            Player.StateMachine.State = preSpectateState;
+            Player.ForceCameraUpdate = preSpectateForceCameraUpdate;
+            SaveData.Instance.Assists.Invincible = preSpectateInvincible;
+            Settings.Interactions = preSpectateInteractions;
+        }
+
         public void UpdateIdleTag(Entity target, ref GhostEmote idleTag, bool idle) {
             if (Engine.Scene is not Level level) {
                 idle = false;
@@ -668,6 +732,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             bool ready = Client != null && Client.IsReady && Client.PlayerInfo != null;
             if (Engine.Scene is not Level level || !ready) {
                 GrabbedBy = null;
+                if (IsSpectating)
+                    CancelSpectate();
 
                 if (ready && Engine.Scene is MapEditor) {
                     Player = null;
@@ -697,6 +763,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             bool grabReleased = false;
             grabReleased |= IsGrabbed && (GrabTimeout += Engine.RawDeltaTime) >= GrabTimeoutMax;
             grabReleased |= GrabbedBy != null && GrabbedBy.Scene != level;
+            grabReleased |= SpectateTarget != null && SpectateTarget.Scene == level;
 
             if (grabReleased) {
                 GrabbedBy = null;
@@ -768,6 +835,13 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     SendReleaseMe();
                 }
             }
+
+            bool unSpectate = IsSpectating && SpectateTarget != null && SpectateTarget.Scene != level;
+            unSpectate |= !IsSpectating && SpectateTarget != null;
+            unSpectate |= IsSpectating && (Input.Dash.Pressed || Input.Jump.Pressed || Input.MoveY == 1 || Input.Grab.Pressed || Player.Dead);
+
+            if (unSpectate)
+                CancelSpectate();
 
             if (PlayerNameTag == null || PlayerNameTag.Tracking != Player || PlayerNameTag.Scene != level) {
                 PlayerNameTag?.RemoveSelf();
@@ -974,7 +1048,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public void SendFrame() {
             Player player = Player;
-            if (player == null || player.Sprite == null || player.Hair == null)
+            if (player == null || player.Sprite == null || player.Hair == null || IsSpectating)
                 return;
 
             DataPlayerFrame.Entity[] followers;
@@ -1107,6 +1181,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public void SendReleaseMe() {
             try {
+                Logger.Log(LogLevel.INF, "client-main", $"SendReleaseMe called.\n");
                 Client?.Send(new DataPlayerGrabPlayer {
                     Player = Client.PlayerInfo,
                     Grabbing = Client.PlayerInfo,

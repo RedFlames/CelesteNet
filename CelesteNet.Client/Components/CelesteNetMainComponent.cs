@@ -464,12 +464,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public void Handle(CelesteNetConnection con, DataPlayerGrabPlayer grab) {
             Player player = Player;
-
-            if (player != null && grab.Player.ID == Client.PlayerInfo.ID || grab.Grabbing.ID == Client.PlayerInfo.ID)
+            if (Engine.Scene is not Level level || level.Paused || player == null || !Settings.Interactions)
                 goto Release;
-
-            if (Engine.Scene is not Level level || level.Paused || player == null || !Settings.Interactions || IsSpectating)
-                return;
 
             if (grab.Player.ID != Client.PlayerInfo.ID && grab.Grabbing.ID == Client.PlayerInfo.ID) {
                 if (GrabCooldown > 0f) {

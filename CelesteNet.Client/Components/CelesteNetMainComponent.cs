@@ -60,8 +60,11 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public DataPlayerInfo Spectate;
         public Ghost SpectateTarget;
+        public string SpectateLevel;
         public bool IsSpectating = false;
         public bool SpectateTargetDied = false;
+        public int LevelLoadUnspectateCooldown = 0;
+        public bool CanRespecOnTransition = false;
         protected bool preSpectateVisible = true;
         protected int preSpectateState = Player.StNormal;
         protected bool preSpectateForceCameraUpdate = true;
@@ -99,6 +102,9 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     On.Celeste.PlayerHair.GetHairScale += OnGetHairScale;
                     On.Celeste.PlayerHair.GetHairTexture += OnGetHairTexture;
                     On.Celeste.TrailManager.Add_Vector2_Image_PlayerHair_Vector2_Color_int_float_bool_bool += OnDashTrailAdd;
+
+                    preSpectateInvincible = SaveData.Instance.Assists.Invincible;
+                    preSpectateInteractions = Settings.Interactions;
 
                     MethodInfo transitionRoutine =
                         typeof(Level).GetNestedType("<TransitionRoutine>d__24", BindingFlags.NonPublic)
@@ -151,8 +157,10 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             if (IsGrabbed && Player.StateMachine.State == Player.StFrozen)
                 Player.StateMachine.State = Player.StNormal;
 
-            if (IsSpectating)
+            if (IsSpectating && LevelLoadUnspectateCooldown <= 0) {
+                Logger.Log(LogLevel.INF, "client-main-spectate", $"Cleanup unspec: {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
                 CancelSpectate();
+            }
 
             if (PlayerNameTag != null)
                 PlayerNameTag.Name = "";
@@ -240,6 +248,12 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 }
 
                 UpdateIdleTag(ghost, ref ghost.IdleTag, state.Idle);
+
+                if (state.Level != SpectateLevel) {
+                    Logger.Log(LogLevel.INF, "client-main-spectate", $"SpectateLevel:\n {state.SID} {state.Level}\n {SpectateLevel}\n");
+                    SpectateLevel = state.Level;
+                    SpectateSetState();
+                }
             }
         }
 
@@ -299,8 +313,22 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 ghost.Interactive = state.Interactive;
             });
 
-            if (IsSpectating && SpectateTarget == ghost && Player != null) {
-                Player.Position = frame.Position;
+            if (IsSpectating && (ghost != null && ghost == SpectateTarget || frame.Player != null && Spectate == frame.Player)) {
+                if (Player != null)
+                    Player.Position = frame.Position;
+
+                NextRespawnPosition = frame.Position;
+
+                if (frame.Dead) {
+                    Logger.Log(LogLevel.INF, "client-main-spectate", $"frame dead:  {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
+                    SpectateTargetDied = true;
+                    SpectateTarget = null;
+                    SpectateGhost(Spectate);
+                } else if (SpectateTargetDied) {
+                    Logger.Log(LogLevel.INF, "client-main-spectate", $"SpectateTargetDied:  {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
+                    SpectateTarget = ghost;
+                    SpectateTargetDied = false;
+                }
             }
         }
 
@@ -619,7 +647,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             ghost?.RunOnUpdate(g => g.NameTag.Name = "");
         }
 
-        public void SpectateGhost(DataPlayerInfo info) {
+        public void SpectateGhost(DataPlayerInfo info, string Level = null) {
             Session session = Session;
             Level level = PlayerBody?.Scene as Level;
             bool outside = IsGhostOutside(session, level, info, out DataPlayerState state);
@@ -630,36 +658,62 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             if (Player == null)
                 return;
 
+            if (IsSpectating == false && Spectate == null && SpectateTarget == null) {
+                preSpectateVisible = Player.Visible;
+                preSpectateState = Player.StateMachine.State;
+                preSpectateForceCameraUpdate = Player.ForceCameraUpdate;
+            }
+
             Spectate = info;
             SpectateTarget = ghost;
             IsSpectating = true;
+            SpectateTargetDied = false;
+            LevelLoadUnspectateCooldown = 5;
+            CanRespecOnTransition = false;
 
-            preSpectateVisible = Player.Visible;
-            preSpectateState =  Player.StateMachine.State;
-            preSpectateForceCameraUpdate =  Player.ForceCameraUpdate;
-            preSpectateInvincible =  SaveData.Instance.Assists.Invincible;
-            preSpectateInteractions = Settings.Interactions;
+            if (!string.IsNullOrEmpty(Level) && session.MapData.Get(Level) != null) {
+                session.Level = Level;
+                session.FirstLevel = false;
+            }
 
-            Player.Visible = false;
-            Player.StateMachine.State = Player.StFrozen;
-            Player.ForceCameraUpdate = true;
-            SaveData.Instance.Assists.Invincible = true;
-            Settings.Interactions = false;
+            SpectateLevel = session.Level;
+            LevelEnter.Go(session, true);
+        }
+
+        public void SpectateSetState(bool set = true) {
+            Logger.Log(LogLevel.INF, "client-main-spectate", $"SpectateSetState {set}...");
+
+            if (set) {
+                if (Player != null) {
+                    Player.Visible = false;
+                    Player.StateMachine.State = Player.StFrozen;
+                    Player.ForceCameraUpdate = true;
+                    Player.Collidable = false;
+                }
+                SaveData.Instance.Assists.Invincible = true;
+                Settings.Interactions = false;
+            } else {
+                if (Player != null) {
+                    Player.Visible = true; // preSpectateVisible;
+                    Player.Collidable = true;
+                    Player.StateMachine.State = Player.StNormal; // preSpectateState;
+                    Player.ForceCameraUpdate = preSpectateForceCameraUpdate;
+                }
+                SaveData.Instance.Assists.Invincible = preSpectateInvincible;
+                Settings.Interactions = preSpectateInteractions;
+            }
         }
 
         protected void CancelSpectate() {
             Spectate = null;
             SpectateTarget = null;
             IsSpectating = false;
+            SpectateTargetDied = false;
+            CanRespecOnTransition = false;
 
-            if (Player == null)
-                return;
+            Logger.Log(LogLevel.INF, "client-main-spectate", $"CancelSpectate...");
 
-            Player.Visible = preSpectateVisible;
-            Player.StateMachine.State = preSpectateState;
-            Player.ForceCameraUpdate = preSpectateForceCameraUpdate;
-            SaveData.Instance.Assists.Invincible = preSpectateInvincible;
-            Settings.Interactions = preSpectateInteractions;
+            SpectateSetState(false);
         }
 
         public void UpdateIdleTag(Entity target, ref GhostEmote idleTag, bool idle) {
@@ -725,11 +779,18 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         public override void Update(GameTime gameTime) {
             base.Update(gameTime);
 
+            //PlayerNameTagAsDebugging();
+
+            if (LevelLoadUnspectateCooldown > 0)
+                LevelLoadUnspectateCooldown--;
+
             bool ready = Client != null && Client.IsReady && Client.PlayerInfo != null;
             if (Engine.Scene is not Level level || !ready) {
                 GrabbedBy = null;
-                if (IsSpectating)
+                if (IsSpectating && !ready && LevelLoadUnspectateCooldown <= 0) {
+                    Logger.Log(LogLevel.INF, "client-main-spectate", $"Unspectating @1 because:  {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
                     CancelSpectate();
+                }
 
                 if (ready && Engine.Scene is MapEditor) {
                     Player = null;
@@ -832,18 +893,37 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 }
             }
 
-            bool unSpectate = IsSpectating && SpectateTarget != null && SpectateTarget.Scene != level;
-            unSpectate |= !IsSpectating && SpectateTarget != null;
-            unSpectate |= IsSpectating && (Input.Dash.Pressed || Input.Jump.Pressed || Input.MoveY == 1 || Input.Grab.Pressed || Player.Dead);
+            if (IsSpectating && LevelLoadUnspectateCooldown > 0) {
+                SpectateSetState();
+            }
 
-            if (unSpectate)
+            if (CanRespecOnTransition) {
+                if (IsSpectating && LevelLoadUnspectateCooldown <= 0 && level.Session.Level != SpectateLevel)
+                    SpectateGhost(Spectate, SpectateLevel);
+            } else {
+                CanRespecOnTransition = true;
+                LevelLoadUnspectateCooldown = 5;
+            }
+
+            bool unSpectate = IsSpectating && Spectate != null && !SpectateTargetDied && SpectateTarget == null;
+            unSpectate |= !IsSpectating && Spectate != null;
+            unSpectate |= (IsSpectating || Spectate != null || SpectateTarget != null) && (Input.Dash.Pressed || Input.Jump.Pressed || Input.MoveY == 1 || Input.Grab.Pressed);
+
+            if (unSpectate && LevelLoadUnspectateCooldown <= 0) {
+                Logger.Log(LogLevel.INF, "client-main-spectate", $"Unspectating @2 because:  {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
                 CancelSpectate();
+            }
 
             if (PlayerNameTag == null || PlayerNameTag.Tracking != Player || PlayerNameTag.Scene != level) {
                 PlayerNameTag?.RemoveSelf();
                 level.Add(PlayerNameTag = new(Player, Client.PlayerInfo.DisplayName));
             }
-            PlayerNameTag.Alpha = Settings.ShowOwnName ? 1f : 0f;
+            PlayerNameTag.Alpha = Settings.ShowOwnName && !IsSpectating ? 1f : 0f;
+        }
+
+        public void PlayerNameTagAsDebugging() {
+            if (PlayerNameTag != null)
+                PlayerNameTag.Name = $" {LevelLoadUnspectateCooldown} / {IsSpectating} / { Spectate} / { SpectateTarget} / { SpectateTargetDied} / { SpectateTarget?.Scene}";
         }
 
         public override void Tick() {
@@ -877,6 +957,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             Player = level.Tracker.GetEntity<Player>();
             PlayerBody = Player;
 
+            LevelLoadUnspectateCooldown = 5;
+
             SendState();
         }
 
@@ -896,6 +978,10 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 player.Position = NextRespawnPosition.Value;
                 NextRespawnPosition = null;
             }
+
+            Logger.Log(LogLevel.INF, "client-main-spectate", $"OnLoadNewPlayer  {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
+            LevelLoadUnspectateCooldown = 5;
+
             return player;
         }
 
@@ -908,8 +994,14 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             Player = self;
             PlayerBody = self;
 
+            SpectateSetState(false);
+
             SendState();
             SendGraphics();
+
+            Logger.Log(LogLevel.INF, "client-main-spectate", $"OnPlayerAdded  {LevelLoadUnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
+
+            LevelLoadUnspectateCooldown = 5;
 
             foreach (DataPlayerFrame frame in LastFrames.Values.ToArray())
                 Handle(null, frame);

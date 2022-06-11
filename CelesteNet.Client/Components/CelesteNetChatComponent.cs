@@ -133,6 +133,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 DataPlayerInfo[] all = Client.Data.GetRefs<DataPlayerInfo>();
 
                 DataPlayerInfo player = all.FirstOrDefault(p => p.FullName.StartsWith(text, StringComparison.InvariantCultureIgnoreCase));
+
                 if (!string.IsNullOrEmpty(player?.DisplayName))
                     Context.Main.SpectateGhost(player);
                 return;

@@ -134,8 +134,10 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                 DataPlayerInfo player = all.FirstOrDefault(p => p.FullName.StartsWith(text, StringComparison.InvariantCultureIgnoreCase));
 
-                if (!string.IsNullOrEmpty(player?.DisplayName))
+                if (!string.IsNullOrEmpty(player?.DisplayName)) {
+                    Context.Main.CancelSpectate();
                     Context.Main.SpectateGhost(player);
+                }
                 return;
             }
 

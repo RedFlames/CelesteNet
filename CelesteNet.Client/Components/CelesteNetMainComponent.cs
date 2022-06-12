@@ -151,6 +151,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             Session = null;
             WasIdle = false;
             WasInteractive = false;
+            NextRespawnPosition = null;
 
             foreach (Ghost ghost in Ghosts.Values)
                 ghost?.RemoveSelf();
@@ -418,6 +419,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                 if (SaveData.Instance == null)
                     SaveData.InitializeDebugMode();
+
+                CancelSpectate();
 
                 AreaData area = AreaDataExt.Get(target.SID);
 
@@ -698,7 +701,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     Player.ForceCameraUpdate = true;
                     Player.Collidable = false;
                 }
-                SaveData.Instance.Assists.Invincible = true;
+                if (SaveData.Instance?.Assists != null)
+                    SaveData.Instance.Assists.Invincible = true;
                 Settings.Interactions = false;
             } else {
                 if (Player != null) {
@@ -707,12 +711,13 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     Player.StateMachine.State = Player.StNormal; // preSpectateState;
                     Player.ForceCameraUpdate = preSpectateForceCameraUpdate;
                 }
-                SaveData.Instance.Assists.Invincible = preSpectateInvincible ?? false;
+                if (SaveData.Instance?.Assists != null)
+                    SaveData.Instance.Assists.Invincible = preSpectateInvincible ?? false;
                 Settings.Interactions = preSpectateInteractions;
             }
         }
 
-        protected void CancelSpectate() {
+        public void CancelSpectate() {
             Spectate = null;
             SpectateTarget = null;
             IsSpectating = false;
@@ -970,8 +975,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
             Player = level.Tracker.GetEntity<Player>();
             PlayerBody = Player;
-
-            UnspectateCooldown = 5;
 
             SendState();
         }

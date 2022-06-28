@@ -72,6 +72,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         protected bool? preSpectateInvincible = null;
         protected bool preSpectateInteractions = false;
 
+        private int countLevelLoads = 0;
+
         private Vector2? NextRespawnPosition;
 
         private ILHook ILHookTransitionRoutine;
@@ -255,6 +257,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 if (IsSpectating && Spectate == state.Player && state.Level != SpectateLevel) {
                     Logger.Log(LogLevel.INF, "client-main-spectate", $"SpectateLevel:\n {state.SID} {state.Level}\n {SpectateLevel}\n");
                     SpectateLevel = state.Level;
+                    countLevelLoads++;
                     SpectateSetState();
                 }
             }
@@ -723,6 +726,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             IsSpectating = false;
             SpectateTargetDied = false;
             TransitionDelaySpectate = true;
+            countLevelLoads = 0;
 
             Logger.Log(LogLevel.INF, "client-main-spectate", $"CancelSpectate...");
 
@@ -793,9 +797,15 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             base.Update(gameTime);
 
             //PlayerNameTagAsDebugging();
+            Logger.Log(LogLevel.INF, "client-main-spectate", $"Update counters {UnspectateCooldown} / {countLevelLoads}");
 
             if (UnspectateCooldown > 0)
                 UnspectateCooldown--;
+
+            if (countLevelLoads > 5) {
+                Logger.Log(LogLevel.INF, "client-main-spectate", $"OnLoadLevel  countLevelLoads failsafe tripped! {countLevelLoads} {UnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
+                CancelSpectate();
+            }
 
             bool ready = Client != null && Client.IsReady && Client.PlayerInfo != null;
             if (Engine.Scene is not Level level || !ready) {
@@ -906,13 +916,24 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 }
             }
 
-            if (IsSpectating && UnspectateCooldown > 0) {
-                SpectateSetState();
+            if (IsSpectating) {
+                if (UnspectateCooldown > 0) {
+                    SpectateSetState();
+                } else if (countLevelLoads > 0) {
+                    countLevelLoads--;
+                }
             }
 
             if (!TransitionDelaySpectate) {
-                if (IsSpectating && UnspectateCooldown <= 0 && SpectateLevel != null && level.Session.Level != SpectateLevel)
-                    SpectateGhost(Spectate, SpectateLevel);
+                if (IsSpectating && UnspectateCooldown <= 0) {
+                    if (SpectateLevel == null) {
+                        if (countLevelLoads > 5)
+                            CancelSpectate();
+                    } else if (level.Session.Level != SpectateLevel) {
+                        if (countLevelLoads <= 0)
+                            SpectateGhost(Spectate, SpectateLevel);
+                    }
+                }
             } else {
                 TransitionDelaySpectate = false;
                 UnspectateCooldown = 5;
@@ -970,6 +991,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             WasIdle = false;
             WasInteractive = false;
 
+            countLevelLoads++;
+
             if (Client == null)
                 return;
 
@@ -995,6 +1018,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 player.Position = NextRespawnPosition.Value;
                 NextRespawnPosition = null;
             }
+
+            countLevelLoads++;
 
             Logger.Log(LogLevel.INF, "client-main-spectate", $"OnLoadNewPlayer  {UnspectateCooldown}\n {IsSpectating}\n {Spectate}\n {SpectateTarget}\n{SpectateTargetDied}\n{SpectateTarget?.Scene}\n");
             UnspectateCooldown = 5;

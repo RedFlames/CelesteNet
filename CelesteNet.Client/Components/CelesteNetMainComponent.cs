@@ -575,7 +575,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                         UnsupportedSpriteModes.Add(graphics.SpriteMode);
                     RunOnMainThread(() => {
                         level.Add(ghost);
-                        level.OnEndOfFrame += () => ghost.Active = true;
+                        //level.OnEndOfFrame += () => ghost.Active = true;
                         ghost.UpdateGraphics(graphics);
                     });
                     ghost.UpdateGraphics(graphics);
@@ -674,6 +674,10 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 }
                 return;
             }
+
+            foreach (Ghost g in Ghosts.Values)
+                if (g != null)
+                    g.Active = true;
 
             bool grabReleased = false;
             grabReleased |= IsGrabbed && (GrabTimeout += Engine.RawDeltaTime) >= GrabTimeoutMax;
@@ -883,7 +887,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public void ResetState(Player player = null, Session ses = null) {
             // Clear ghosts if the scene changed
-            if (player?.Scene != Player?.Scene) {
+            if (player != null && player.Scene != Player?.Scene) {
                 lock (Ghosts) {
                     foreach (Ghost ghost in Ghosts.Values)
                         ghost?.RemoveSelf();

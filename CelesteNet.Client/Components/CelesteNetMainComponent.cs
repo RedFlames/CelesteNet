@@ -206,6 +206,9 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     ghost == null)
                     return;
 
+                if (Settings.Interactions != state.Interactive && ghost == GrabbedBy)
+                    SendReleaseMe();
+
                 Session session = Session;
                 if (session != null && (state.SID != session.Area.SID || state.Mode != session.Area.Mode || state.Level == LevelDebugMap)) {
                     RemoveGhost(state.Player); // If we get here, id must belong to a valid ghost, so it can't be uint.MaxValue and state.Player mustn't be null
@@ -433,8 +436,11 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
         public void Handle(CelesteNetConnection con, DataPlayerGrabPlayer grab) {
             Player player = Player;
-            if (Engine.Scene is not Level level || level.Paused || player == null || !Settings.Interactions)
+            if (player != null && !Settings.Interactions && (grab.Player.ID == Client.PlayerInfo.ID || grab.Grabbing.ID == Client.PlayerInfo.ID))
                 goto Release;
+
+            if (Engine.Scene is not Level level || level.Paused || player == null || !Settings.Interactions)
+                return;
 
             if (grab.Player.ID != Client.PlayerInfo.ID && grab.Grabbing.ID == Client.PlayerInfo.ID) {
                 if (GrabCooldown > 0f) {

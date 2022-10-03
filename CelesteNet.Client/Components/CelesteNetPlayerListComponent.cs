@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Celeste.Mod.CelesteNet.Client.Components.CelesteNetPlayerListComponent;
 using MDraw = Monocle.Draw;
 
 namespace Celeste.Mod.CelesteNet.Client.Components {
@@ -135,6 +136,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     RebuildListChannels(ref list, ref all);
                     break;
             }
+
+            Logger.Log("SORT", "List was rebuilt");
 
             List = list;
         }
@@ -361,6 +364,65 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             SplitSuccessfully = splitSuccessfully;
         }
 
+        private void ReorderSameMapPlayers() {
+            string currentSide = "";
+
+            int sortIter = 0;
+
+            Logger.Log("SORT", "Attempting Reorder");
+
+            for (int i = 0; i < List.Count; i++) {
+                if (!(List[i] is BlobPlayer pb)) {
+                    sortIter = i;
+                    currentSide = "";
+                    Logger.Log("SORT", $"Resetting Reorder because {i} is not a BP");
+                    continue;
+                }
+
+                if (!currentSide.IsNullOrEmpty()) {
+                    if (pb.Location.Name + pb.Location.Side == currentSide)
+                        continue;
+
+                    if (i > sortIter + 1) {
+                        Logger.Log("SORT", $"Attempting Reorder from {sortIter} to {i - 1}");
+                        int oss = sortIter;
+                        for (int j = sortIter; j < i; j++)
+                            Logger.Log("SORT", $"{j} = {List[j].Name} {List[j].Dyn.Y}");
+
+                        int subIter = 0;
+                        List<Blob> sublist = List.GetRange(sortIter, i - sortIter);
+                        List<float> ypos = sublist.Select(b => b.Dyn.Y).ToList();
+                        Logger.Log("SORT", $"Attempting Reorder with {sublist.Count} elements");
+                        if (sublist.All(b => b is BlobPlayer pb && pb.Location.Name + pb.Location.Side == currentSide)) {
+                            foreach (BlobPlayer b in sublist.OrderBy(p => p is BlobPlayer pb ? GetLevelOrderKey(pb.Location) : "9")) {
+                                Logger.Log("SORT", $"Inserting {b.Name} at {sortIter} ({List[sortIter].Name})");
+                                // TODO: some kinda Pos setter or SetDynY()?
+                                b.Dyn.Y = ypos[subIter];
+                                b.Location.Dyn.Y = ypos[subIter];
+                                b.PingBlob.Dyn.Y = ypos[subIter];
+                                List[sortIter + subIter] = b;
+                                subIter++;
+                                Logger.Log("SORT", $"{b.Name} == {List[sortIter - 1].Name}");
+                            }
+                        } else {
+                            Logger.Log("SORT", $"Reorder condition failed!");
+                        }
+
+                        Logger.Log("SORT", $"Reorder done.");
+                        for (int j = oss; j < i; j++)
+                            Logger.Log("SORT", $"{j} = {List[j].Name} {List[j].Dyn.Y}");
+                    }
+                    sortIter = i;
+                    currentSide = pb.Location.Name + pb.Location.Side;
+                    Logger.Log("SORT", $"Set new Reorder location {currentSide} {sortIter} at {List[i].Name}");
+                } else {
+                    currentSide = pb.Location.Name + pb.Location.Side;
+                    sortIter = i;
+                    Logger.Log("SORT", $"Set Reorder location {currentSide} {sortIter} at {List[i].Name}");
+                }
+            }
+        }
+
         private string GetOrderKey(DataPlayerInfo player) {
             if (player == null)
                 return "9";
@@ -369,6 +431,22 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 return $"0 {(state.SID.StartsWith("Celeste/") ? "0" : "1") + state.SID + (int) state.Mode} {player.FullName}";
 
             return $"8 {player.FullName}";
+        }
+
+        private string GetLevelOrderKey(BlobLocation loc) {
+            if (loc == null)
+                return "9";
+
+            string level = loc.Level;
+
+            if (!"0123456789".Contains(level.FirstOrDefault()))
+                return $"2 {level}";
+            
+            string levelNum = new (level.TakeWhile(char.IsDigit).ToArray());
+            if (!int.TryParse(levelNum, out int num))
+                return $"1 {level}";
+
+            return $"0 {num.ToString(5)}";
         }
 
         private DataPlayerInfo GetPlayerInfo(uint id) {
@@ -463,7 +541,19 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         }
 
         public void Handle(CelesteNetConnection con, DataPlayerState state) {
-            RunOnMainThread(() => RebuildList());
+            RunOnMainThread(() => {
+
+                // Don't rebuild the entire list
+                // Try to find the player's blob
+                BlobPlayer playerBlob = (BlobPlayer) List?.FirstOrDefault(b => b is BlobPlayer pb && pb.Player == state.Player);
+                if (playerBlob == null || playerBlob.Location.Name.IsNullOrEmpty()) {
+                    RebuildList();
+                    return;
+                }
+
+                GetState(playerBlob, state);
+                playerBlob.Generate();
+            });
         }
 
         public void Handle(CelesteNetConnection con, DataConnectionInfo info) {
@@ -473,7 +563,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                 // Don't rebuild the entire list
                 // Try to find the player's blob
-                BlobPlayer playerBlob = (BlobPlayer) List?.First(b => b is BlobPlayer pb && pb.Player == info.Player);
+                BlobPlayer playerBlob = (BlobPlayer) List?.FirstOrDefault(b => b is BlobPlayer pb && pb.Player == info.Player);
                 if (playerBlob == null)
                     return;
 
@@ -530,8 +620,12 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 RebuildList();
             }
 
-            if (!(Engine.Scene?.Paused ?? false) && Settings.ButtonPlayerList.Button.Pressed)
+            if (!(Engine.Scene?.Paused ?? false) && Settings.ButtonPlayerList.Button.Pressed) {
                 Active = !Active;
+                if (Active) {
+                    ReorderSameMapPlayers();
+                }
+            }
         }
 
         public override void Draw(GameTime gameTime) {

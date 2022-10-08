@@ -106,12 +106,25 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             ON      = 0b11,
         }
 
+        public enum LocationSubsort {
+            Always = 0,
+            every_1s = 1,
+            every_2s = 2,
+            every_5s = 5,
+            every_10s = 10,
+            Never
+        }
+        public LocationSubsort LocationSubsortValue => Settings.SortSameLocationByRoom;
+        private LocationSubsort LastLocationSubsortValue;
+        public bool LocationSubsortOn => LocationSubsortValue != LocationSubsort.Never && LocationMode.HasFlag(LocationModes.Text);
+
         private Dictionary<uint, int> Subsorting = new();
-        private float SubsortingInterval = 3f; // Seconds between Level-sort updates
-        private float TimeSinceSubsort = 5f;
+        private float SubsortingInterval => (float) LocationSubsortValue; // Seconds between Level-sort updates
+        private float TimeSinceSubsort = 999f;
 
         public CelesteNetPlayerListComponent(CelesteNetClientContext context, Game game)
             : base(context, game) {
+            TimeSinceSubsort = SubsortingInterval + 1;
 
             UpdateOrder = 10000;
             DrawOrder = 10001;
@@ -140,7 +153,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     RebuildListChannels(ref list, ref all);
                     break;
             }
-            if (TimeSinceSubsort > SubsortingInterval)
+            if (LocationSubsortOn && TimeSinceSubsort > SubsortingInterval)
                 SubsortSameMapPlayers();
 
             Logger.Log("SORT", "List was rebuilt");
@@ -636,12 +649,19 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 RebuildList();
             }
 
+            if (LastLocationSubsortValue != LocationSubsortValue) {
+                LastLocationSubsortValue = LocationSubsortValue;
+                TimeSinceSubsort = SubsortingInterval + 1;
+                if (LocationSubsortValue == LocationSubsort.Never)
+                    RebuildList();
+            }
+
             if (!(Engine.Scene?.Paused ?? false) && Settings.ButtonPlayerList.Button.Pressed) {
                 Active = !Active;
                 TimeSinceSubsort = SubsortingInterval + 1;
             }
 
-            if (Active && TimeSinceSubsort > SubsortingInterval)
+            if (Active && LocationSubsortOn && TimeSinceSubsort > SubsortingInterval)
                 SubsortSameMapPlayers();
         }
 

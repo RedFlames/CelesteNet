@@ -83,6 +83,7 @@ namespace Celeste.Mod.CelesteNet.Client {
 
         public CelesteNetPlayerListComponent.ListModes PlayerListMode { get; set; } = CelesteNetPlayerListComponent.ListModes.Channels;
         public CelesteNetPlayerListComponent.LocationModes ShowPlayerListLocations { get; set; } = CelesteNetPlayerListComponent.LocationModes.ON;
+        public CelesteNetPlayerListComponent.LocationSubsort SortSameLocationByRoom { get; set; } = CelesteNetPlayerListComponent.LocationSubsort.Never;
         [SettingIgnore]
         public bool PlayerListShortenRandomizer { get; set; } = true;
 #if !DEBUG

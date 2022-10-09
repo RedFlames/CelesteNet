@@ -41,12 +41,23 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         public RenderTarget2D BlurLowRT;
         public RenderTarget2D BlurRT;
 
+        private MTexture texture;
+
+        private Player player;
+        private float maskDynScale = 0.0f;
+
         public CelesteNetRenderHelperComponent(CelesteNetClientContext context, Game game)
             : base(context, game) {
 
             UpdateOrder = 10000;
             Visible = false;
         }
+
+        protected override void LoadContent() {
+            base.LoadContent();
+            texture = GFX.Gui["celestenet/mask"];
+        }
+
 
         public void Rect(float x, float y, float width, float height, Color color) {
             int xi = (int) Math.Floor(x);
@@ -296,6 +307,36 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                         foreach (CelesteNetGameComponent component in uiDC)
                             component.Draw(null);
                         IsDrawingUI = false;
+
+                        if (!(texture?.Texture?.Texture?.IsDisposed ?? true) && Engine.Scene is Level level) {
+                            if (player == null || player.Scene != level)
+                                player = level.Tracker.GetEntity<Player>();
+
+                            if (player != null) {
+                                float scaling = player.Speed.LengthSquared() / 100000f;
+
+                                maskDynScale = Calc.LerpClamp(maskDynScale, scaling, scaling > maskDynScale ? 0.6f : 0.2f);
+
+                                MDraw.SpriteBatch.Begin(
+                                    SpriteSortMode.Deferred,
+                                    new BlendState() {
+                                        ColorSourceBlend = Blend.Zero,
+                                        AlphaSourceBlend = Blend.Zero,
+                                        ColorDestinationBlend = Blend.InverseSourceAlpha,
+                                        AlphaDestinationBlend = Blend.InverseSourceAlpha
+                                    },
+                                    SamplerState.LinearClamp,
+                                    DepthStencilState.None,
+                                    RasterizerState.CullNone,
+                                    null,
+                                    Matrix.Identity
+                                );
+                                texture.DrawCentered(level.WorldToScreen(player.Center), Color.White, 1f + maskDynScale);
+                                MDraw.SpriteBatch.End();
+                            }
+                        } else {
+                            player = null;
+                        }
                     }
 
                     GraphicsDevice.SetRenderTarget(tmpRealRT);

@@ -185,11 +185,8 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 }
 
             } else {
-                if (!Ghosts.TryGetValue(move.Player.ID, out Ghost ghost) ||
-                    ghost == null)
+                if (!RemoveGhost(move.Player))
                     return;
-
-                RemoveGhost(move.Player);
 
                 foreach (DataType data in Client.Data.GetBoundRefs(move.Player))
                     if (data.TryGet(Client.Data, out MetaPlayerPrivateState state))
@@ -590,7 +587,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                         UnsupportedSpriteModes.Add(graphics.SpriteMode);
                     RunOnMainThread(() => {
                         level.Add(ghost);
-                        level.OnEndOfFrame += () => ghost.Active = true;
                         ghost.UpdateGraphics(graphics);
                     });
                     ghost.UpdateGraphics(graphics);
@@ -598,9 +594,11 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             return ghost;
         }
 
-        protected void RemoveGhost(DataPlayerInfo info) {
-            Ghosts.TryRemove(info.ID, out Ghost ghost);
+        protected bool RemoveGhost(DataPlayerInfo player) {
+            if (!Ghosts.TryRemove(player.ID, out Ghost ghost))
+                return false;
             ghost?.RunOnUpdate(g => g.NameTag.Name = "");
+            return true;
         }
 
         protected void RemoveAllGhosts() {
@@ -674,6 +672,10 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         public override void Update(GameTime gameTime) {
             base.Update(gameTime);
 
+            foreach (Ghost g in Ghosts.Values)
+                if (g != null)
+                    g.Active = true;
+
             bool ready = Client != null && Client.IsReady && Client.PlayerInfo != null;
             if (Engine.Scene is not Level level || !ready) {
                 GrabbedBy = null;
@@ -684,6 +686,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
 
                     if (MapEditorArea == null || MapEditorArea.Value.SID != area.SID || MapEditorArea.Value.Mode != area.Mode) {
                         MapEditorArea = area;
+                        // FIXME: NOTE BEFORE MERGING: can we move the ResetState() call here, which would be more inline with the below if?
                         SendState();
                     }
                 }
@@ -799,7 +802,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             orig(level, playerIntro, isFromLoader);
 
             Player player = null;
-
             if (Client != null)
                 player = level.Tracker.GetEntity<Player>();
 
@@ -832,8 +834,11 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             SendState();
             SendGraphics();
 
-            foreach (DataPlayerFrame frame in LastFrames.Values.ToArray())
-                Handle(null, frame);
+            // We can't directly handle the frames here, as then ghost creation logic could fail if we're currently loading a level in OnEndOfFrame
+            scene.OnEndOfFrame += () => {
+                foreach (DataPlayerFrame frame in LastFrames.Values.ToArray())
+                    Handle(null, frame);
+            };
         }
 
         private PlayerDeadBody OnPlayerDie(On.Celeste.Player.orig_Die orig, Player self, Vector2 direction, bool evenIfInvincible, bool registerDeathInStats) {

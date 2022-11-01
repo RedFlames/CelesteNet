@@ -731,7 +731,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             if (Player == null || Player.Scene != level) {
                 Player player = level.Tracker.GetEntity<Player>();
                 if (player != Player) {
-                    ResetState(Player, level.Session);
+                    ResetState(player, level.Session);
                     StateUpdated |= true;
                     SendGraphics();
                 }

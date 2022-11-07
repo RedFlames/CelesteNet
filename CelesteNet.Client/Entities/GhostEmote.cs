@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 using System;
 using System.Collections.Generic;
@@ -147,12 +148,26 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
                     1920f - size.X * 0.5f - 64f, 1080f - 64f
                 );
 
+                Draw.SpriteBatch.End();
+                Draw.SpriteBatch.Begin(
+                    SpriteSortMode.Deferred,
+                    BlendState.AlphaBlend,
+                    SamplerState.PointClamp,
+                    DepthStencilState.None,
+                    RasterizerState.CullNone,
+                    null,
+                    Engine.ScreenMatrix
+                );
+
                 icon.DrawJustified(
                     pos,
                     new(0.5f, 1f),
                     Color.White * alpha,
                     Vector2.One * scale
                 );
+
+                Draw.SpriteBatch.End();
+                GameplayRenderer.Begin();
 
             } else {
                 Vector2 size = CelesteNetClientFont.Measure(text);

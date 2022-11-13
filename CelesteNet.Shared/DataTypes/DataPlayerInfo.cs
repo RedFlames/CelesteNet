@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataPlayerInfo : DataType<DataPlayerInfo> {
 
-        static DataPlayerInfo() {
-            DataID = "playerInfo";
-        }
+        public static new readonly string DataID = "playerInfo";
 
         public uint ID;
         public string Name = "";
@@ -51,9 +49,9 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public abstract class MetaPlayerBaseType<T> : MetaType<T> where T : MetaPlayerBaseType<T> {
 
-        public MetaPlayerBaseType() {
+        protected MetaPlayerBaseType() {
         }
-        public MetaPlayerBaseType(DataPlayerInfo? player) {
+        protected MetaPlayerBaseType(DataPlayerInfo? player) {
             Player = player;
         }
 
@@ -82,9 +80,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public class MetaPlayerUpdate : MetaPlayerBaseType<MetaPlayerUpdate> {
 
-        static MetaPlayerUpdate() {
-            MetaID = "playerUpd";
-        }
+        public static new readonly string MetaID = "playerUpd";
 
         public MetaPlayerUpdate()
             : base() {
@@ -97,9 +93,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public class MetaPlayerPrivateState : MetaPlayerBaseType<MetaPlayerPrivateState> {
 
-        static MetaPlayerPrivateState() {
-            MetaID = "playerPrivSt";
-        }
+        public static new readonly string MetaID = "playerPrivSt";
 
         public MetaPlayerPrivateState()
             : base() {
@@ -112,9 +106,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public class MetaPlayerPublicState : MetaPlayerBaseType<MetaPlayerPublicState> {
 
-        static MetaPlayerPublicState() {
-            MetaID = "playerPubSt";
-        }
+        public static new readonly string MetaID = "playerPubSt";
 
         public MetaPlayerPublicState()
             : base() {

@@ -11,9 +11,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class MetaRequest : MetaType<MetaRequest> {
 
-        static MetaRequest() {
-            MetaID = "req";
-        }
+        public static new readonly string MetaID = "req";
 
         public uint ID;
 

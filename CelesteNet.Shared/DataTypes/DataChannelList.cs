@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataChannelList : DataType<DataChannelList> {
 
-        static DataChannelList() {
-            DataID = "channelList";
-        }
+        public static new readonly string DataID = "channelList";
 
         public Channel[] List = Dummy<Channel>.EmptyArray;
 

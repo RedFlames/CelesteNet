@@ -17,9 +17,8 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
         public override object? Run(dynamic? input) {
             JArray? uidsRaw = (JArray?) input?.UIDs;
             string[]? uids = uidsRaw?.Select(t => t.ToString()).ToArray();
-            string? reason = (string?) input?.Reason;
-            if (uids == null || uids.Length == 0 ||
-                (reason = reason?.Trim() ?? "").IsNullOrEmpty())
+            string? reason = (string?) input?.Reason?.Trim() ?? "";
+            if (uids == null || uids.Length == 0 || reason.IsNullOrEmpty())
                 return null;
 
             BanInfo ban = new() {

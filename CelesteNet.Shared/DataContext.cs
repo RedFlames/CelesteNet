@@ -22,18 +22,18 @@ namespace Celeste.Mod.CelesteNet {
     public delegate bool DataFilter<T>(CelesteNetConnection con, T data) where T : DataType<T>;
     public class DataContext : IDisposable {
 
-        public readonly Dictionary<string, Type> IDToDataType = new();
-        public readonly Dictionary<Type, string> DataTypeToID = new();
-        public readonly Dictionary<Type, string> DataTypeToSource = new();
+        public Dictionary<string, Type> IDToDataType = new();
+        public Dictionary<Type, string> DataTypeToID = new();
+        public Dictionary<Type, string> DataTypeToSource = new();
 
-        public readonly Dictionary<string, Type> IDToMetaType = new ();
-        public readonly Dictionary<Type, string> MetaTypeToID = new();
+        public Dictionary<string, Type> IDToMetaType = new ();
+        public Dictionary<Type, string> MetaTypeToID = new();
 
-        public readonly object HandlersLock = new();
-        public readonly object FiltersLock = new();
+        public object HandlersLock = new();
+        public object FiltersLock = new();
 
-        public readonly ConcurrentDictionary<Type, DataHandler> Handlers = new();
-        public readonly ConcurrentDictionary<Type, DataFilter> Filters = new();
+        public ConcurrentDictionary<Type, DataHandler> Handlers = new();
+        public ConcurrentDictionary<Type, DataFilter> Filters = new();
 
         private readonly ConcurrentDictionary<object, List<Tuple<Type, DataHandler>>> RegisteredHandlers = new();
         private readonly ConcurrentDictionary<object, List<Tuple<Type, DataFilter>>> RegisteredFilters = new();
@@ -132,7 +132,7 @@ namespace Celeste.Mod.CelesteNet {
         }
 
         public DataHandler RegisterHandler<T>(DataHandler<T> handler) where T : DataType<T> {
-            DataHandler wrap = (con, data) => handler(con, (T) data);
+            void wrap(CelesteNetConnection con, DataType data) => handler(con, (T) data);
             RegisterHandler(typeof(T), wrap);
             return wrap;
         }
@@ -146,7 +146,7 @@ namespace Celeste.Mod.CelesteNet {
         }
 
         public DataFilter RegisterFilter<T>(DataFilter<T> filter) where T : DataType<T> {
-            DataFilter wrap = (con, data) => filter(con, (T) data);
+            bool wrap(CelesteNetConnection con, DataType data) => filter(con, (T) data);
             RegisterFilter(typeof(T), wrap);
             return wrap;
         }
@@ -202,14 +202,14 @@ namespace Celeste.Mod.CelesteNet {
 
                     if (method.Name == "Filter") {
                         Logger.Log(LogLevel.VVV, "data", $"Autoregistering filter for {argType}: {method.GetID()}");
-                        DataFilter filter = (con, data) => method.Invoke(owner, new object[] { con, data }) as bool? ?? false;
-                        filters.Add(Tuple.Create(argType, filter));
+                        bool filter(CelesteNetConnection con, DataType data) => method.Invoke(owner, new object[] { con, data }) as bool? ?? false;
+                        filters.Add(Tuple.Create(argType, (DataFilter) filter));
                         RegisterFilter(argType, filter);
 
                     } else {
                         Logger.Log(LogLevel.VVV, "data", $"Autoregistering handler for {argType}: {method.GetID()}");
-                        DataHandler handler = (con, data) => method.Invoke(owner, new object[] { con, data });
-                        handlers.Add(Tuple.Create(argType, handler));
+                        void handler(CelesteNetConnection con, DataType data) => method.Invoke(owner, new object[] { con, data });
+                        handlers.Add(Tuple.Create(argType, (DataHandler) handler));
                         RegisterHandler(argType, handler);
                     }
                 }

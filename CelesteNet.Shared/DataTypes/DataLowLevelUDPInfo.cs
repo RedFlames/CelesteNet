@@ -75,9 +75,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
     */
     public class DataLowLevelUDPInfo : DataType<DataLowLevelUDPInfo> {
 
-        static DataLowLevelUDPInfo() {
-            DataID = "udpInfo";
-        }
+        public static new readonly string DataID = "udpInfo";
 
         public override DataFlags DataFlags => DataFlags.CoreType | DataFlags.Small;
 

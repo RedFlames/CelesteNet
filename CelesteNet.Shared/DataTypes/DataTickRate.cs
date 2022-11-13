@@ -1,9 +1,7 @@
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataTickRate : DataType<DataTickRate> {
 
-        static DataTickRate() {
-            DataID = "tickRate";
-        }
+        public static new readonly string DataID = "tickRate";
 
         public float TickRate;
 

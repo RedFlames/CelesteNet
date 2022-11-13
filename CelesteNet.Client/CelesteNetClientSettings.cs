@@ -30,9 +30,9 @@ namespace Celeste.Mod.CelesteNet.Client {
                 if (!value && EnabledEntry != null && Engine.Scene != null)
                     Engine.Scene.OnEndOfFrame += () => EnabledEntry?.LeftPressed();
                 if (ServerEntry != null)
-                    ServerEntry.Disabled = value || !(Engine.Scene is Overworld);
+                    ServerEntry.Disabled = value || Engine.Scene is not Overworld;
                 if (NameEntry != null)
-                    NameEntry.Disabled = value || !(Engine.Scene is Overworld);
+                    NameEntry.Disabled = value || Engine.Scene is not Overworld;
             }
         }
         [YamlIgnore]

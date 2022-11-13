@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataPlayerGraphics : DataType<DataPlayerGraphics> {
 
-        static DataPlayerGraphics() {
-            DataID = "playerGraphics";
-        }
+        public static new readonly string DataID = "playerGraphics";
 
         public override DataFlags DataFlags => DataFlags.CoreType;
 

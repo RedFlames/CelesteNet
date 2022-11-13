@@ -15,7 +15,7 @@ namespace Celeste.Mod.CelesteNet.Client {
         public const int UI_WIDTH = 1920;
         public const int UI_HEIGHT = 1080;
 
-        public static bool IsDrawingUI;
+        protected static bool IsDrawingUI;
 
         public CelesteNetClientContext Context;
         public CelesteNetClient Client => Context?.Client;
@@ -26,7 +26,7 @@ namespace Celeste.Mod.CelesteNet.Client {
 
         private bool IsDisposed;
 
-        public CelesteNetGameComponent(CelesteNetClientContext context, Game game)
+        protected CelesteNetGameComponent(CelesteNetClientContext context, Game game)
             : base(game) {
 
             Context = context;
@@ -43,10 +43,6 @@ namespace Celeste.Mod.CelesteNet.Client {
         }
 
         public virtual void Start() {
-        }
-
-        public override void Update(GameTime gameTime) {
-            base.Update(gameTime);
         }
 
         public virtual void Tick() {

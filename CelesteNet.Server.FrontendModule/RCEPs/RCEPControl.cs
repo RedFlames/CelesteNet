@@ -315,7 +315,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
             string[] uids = f.Server.UserData.GetAll();
 
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
             if (!int.TryParse(args["from"], out int from) || from <= 0)
                 from = 0;
             if (!int.TryParse(args["count"], out int count) || count <= 0)
@@ -406,7 +406,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
         [RCEndpoint(false, "/chatlog", "?count={count}&detailed={true|false}", "?count=20&detailed=false", "Chat Log", "Basic chat log.")]
         public static void ChatLog(Frontend f, HttpRequestEventArgs c) {
             bool auth = f.IsAuthorized(c);
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
 
             if (!int.TryParse(args["count"], out int count) || count <= 0)
                 count = 20;
@@ -432,7 +432,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         [RCEndpoint(true, "/settings", "?module={id}", "?module=CelesteNet.Server", "Server Settings", "Get the settings of any server module as YAML.")]
         public static void Settings(Frontend f, HttpRequestEventArgs c) {
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
             string? moduleID = args["module"];
             if (moduleID.IsNullOrEmpty()) {
                 c.Response.StatusCode = (int) HttpStatusCode.BadRequest;
@@ -612,7 +612,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
                 : base(name, isCollectible: true) {
             }
 
-            protected override Assembly? Load(AssemblyName name) {
+            protected override Assembly? Load(AssemblyName assemblyName) {
                 return null;
             }
 

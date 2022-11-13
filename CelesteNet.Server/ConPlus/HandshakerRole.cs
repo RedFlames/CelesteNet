@@ -23,7 +23,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public const int TeapotTimeout = 5000;
 
-        private class TaskWorkerScheduler : TaskScheduler, IDisposable {
+        private sealed class TaskWorkerScheduler : TaskScheduler, IDisposable {
 
             private readonly BlockingCollection<Task> TaskQueue = new();
             private readonly ThreadLocal<bool> ExecutingTasks = new();
@@ -49,15 +49,15 @@ namespace Celeste.Mod.CelesteNet.Server {
             protected override IEnumerable<Task> GetScheduledTasks() => TaskQueue;
             protected override void QueueTask(Task task) => TaskQueue.Add(task);
 
-            protected override bool TryExecuteTaskInline(Task task, bool prevQueued) {
-                if (prevQueued || !ExecutingTasks.Value)
+            protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) {
+                if (taskWasPreviouslyQueued || !ExecutingTasks.Value)
                     return false;
                 return TryExecuteTask(task);
             }
 
         }
 
-        private class Worker : RoleWorker {
+        private sealed class Worker : RoleWorker {
 
             public Worker(HandshakerRole role, NetPlusThread thread) : base(role, thread) {}
 

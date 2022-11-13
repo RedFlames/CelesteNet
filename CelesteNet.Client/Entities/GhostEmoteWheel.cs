@@ -166,7 +166,6 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
                 1920f - radius, 1080f - radius
             );
 
-            // Draw.Circle(pos, radius, Color.Black * 0.8f * alpha * alpha, radius * 0.6f * (1f + 0.2f * (float) Math.Sin(time)), 8);
             BG.DrawCentered(
                 pos,
                 Color.White * alpha * alpha * alpha,

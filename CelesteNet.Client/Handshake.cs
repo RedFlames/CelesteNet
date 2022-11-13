@@ -90,7 +90,7 @@ CelesteNet-PlayerNameKey: {nameKey}
 #pragma warning restore IDE0049
             }
 
-            return new(conToken, conFeatures, (T) settings);
+            return new(conToken, conFeatures, settings);
         }
 
         public static void DoConnectionHandshake(CelesteNetConnection con, IConnectionFeature[] features, CancellationToken token) {

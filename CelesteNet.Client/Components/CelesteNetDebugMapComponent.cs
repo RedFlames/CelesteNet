@@ -142,7 +142,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
         public override void Update(GameTime gameTime) {
             base.Update(gameTime);
 
-            if (!(Engine.Scene is MapEditor)) {
+            if (Engine.Scene is not MapEditor) {
                 LastArea = null;
                 Cleanup();
                 return;

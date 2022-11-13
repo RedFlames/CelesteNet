@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataAudioPlay : DataType<DataAudioPlay> {
 
-        static DataAudioPlay() {
-            DataID = "audioPlay";
-        }
+        public static new readonly string DataID = "audioPlay";
 
         public override DataFlags DataFlags => DataFlags.Unreliable | DataFlags.CoreType;
 

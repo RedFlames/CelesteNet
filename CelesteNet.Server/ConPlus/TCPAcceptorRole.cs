@@ -8,7 +8,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public const int MaxWorkerBacklog = 32;
 
-        private class Worker : RoleWorker {
+        private sealed class Worker : RoleWorker {
 
             public new TCPAcceptorRole Role => (TCPAcceptorRole) base.Role;
 
@@ -44,7 +44,7 @@ namespace Celeste.Mod.CelesteNet.Server {
                     Role.Handshaker.Factory.StartNew(() => {
                         Role.Handshaker.DoTCPUDPHandshake(newCon, Role.ConnectionSettings, Role.TCPReceiver, Role.UDPReceiver, Role.Sender).ContinueWith(t => {
                             if (t.IsFaulted) {
-                                if (t.Exception.InnerException is SocketException se && se.IsDisconnect())
+                                if (t.Exception?.InnerException is SocketException se && se.IsDisconnect())
                                     Logger.Log(LogLevel.WRN, "tcpaccept", $"Disconnect during handshake for connection {remoteEP}");
                                 else
                                     Logger.Log(LogLevel.WRN, "tcpaccept", $"Handshake failed for connection {remoteEP}: {t.Exception}");

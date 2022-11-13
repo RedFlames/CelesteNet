@@ -23,9 +23,9 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         public static readonly string COOKIE_SESSION = "celestenet-session";
 
-        public readonly List<RCEndpoint> EndPoints = new();
-        public readonly HashSet<string> CurrentSessionKeys = new();
-        public readonly HashSet<string> CurrentSessionExecKeys = new();
+        public List<RCEndpoint> EndPoints = new();
+        public HashSet<string> CurrentSessionKeys = new();
+        public HashSet<string> CurrentSessionExecKeys = new();
 
         private HttpServer? HTTPServer;
         private WebSocketServiceHost? WSHost;
@@ -308,7 +308,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         #region Read / Parse Helpers
 
-        public NameValueCollection ParseQueryString(string url) {
+        public static NameValueCollection ParseQueryString(string url) {
             NameValueCollection nvc = new();
 
             int indexOfSplit = url.IndexOf('?');
@@ -342,7 +342,6 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
             }
 
             if (id != pathNew && pathNew.StartsWith("frontend/")) {
-                // c.Response.Redirect($"http://{c.Request.UserHostName}/{pathNew.Substring(9)}");
                 c.Response.StatusCode = (int) HttpStatusCode.Moved;
                 c.Response.Headers.Set("Location", $"http://{c.Request.UserHostName}/{pathNew.Substring(9)}");
                 Respond(c, $"Redirecting to /{pathNew.Substring(9)}");

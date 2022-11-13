@@ -32,7 +32,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         [RCEndpoint(false, "/res", "?id={id}", "?id=frontend/cp/css/frontend.css", "Resource", "Obtain a resource.")]
         public static void Resource(Frontend f, HttpRequestEventArgs c) {
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
 
             string? id = args["id"];
             if (id.IsNullOrEmpty()) {

@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataEmote : DataType<DataEmote> {
 
-        static DataEmote() {
-            DataID = "emote";
-        }
+        public static new readonly string DataID = "emote";
 
         public override DataFlags DataFlags => DataFlags.Unreliable | DataFlags.CoreType;
 

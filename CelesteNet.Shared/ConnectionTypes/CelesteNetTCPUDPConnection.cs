@@ -61,7 +61,7 @@ namespace Celeste.Mod.CelesteNet {
 
         public event Action<CelesteNetTCPUDPConnection, EndPoint>? OnUDPDeath;
 
-        public CelesteNetTCPUDPConnection(DataContext data, uint token, Settings settings, Socket tcpSock) : base(data) {
+        protected CelesteNetTCPUDPConnection(DataContext data, uint token, Settings settings, Socket tcpSock) : base(data) {
             IPEndPoint remoteEp = (IPEndPoint) tcpSock.RemoteEndPoint!;
             ID = $"TCP/UDP {remoteEp.Address}:{remoteEp.Port}";
             UID = GetConnectionUID(remoteEp);
@@ -266,7 +266,8 @@ namespace Celeste.Mod.CelesteNet {
             // Increment the death score
             // If it exceeds the maximum, disable UDP
             if (increaseScore && UDPDeathScore < ConnectionSettings.UDPDeathScoreMax) {
-                if (++UDPDeathScore > ConnectionSettings.UDPDeathScoreMax)
+                UDPDeathScore++;
+                if (UDPDeathScore >= ConnectionSettings.UDPDeathScoreMax)
                     Logger.Log(LogLevel.INF, "tcpudpcon", $"Disabling UDP for connection {this} [{_UDPConnectionID} / {UDPMaxDatagramSize} / {UDPAliveScore} / {UDPDowngradeScore} / {UDPDeathScore}]");
             }
 

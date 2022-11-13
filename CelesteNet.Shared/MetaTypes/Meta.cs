@@ -22,11 +22,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public abstract class MetaType<T> : MetaType where T : MetaType<T> {
 
-        public static string MetaID;
-
-        static MetaType() {
-            MetaID = typeof(T).Name;
-        }
+        public static readonly string MetaID = typeof(T).Name;
 
         public T ReadT(CelesteNetBinaryReader reader) {
             Read(reader);

@@ -59,7 +59,7 @@ namespace Celeste.Mod.CelesteNet.Server {
                 : base(name, isCollectible: true) {
             }
 
-            protected override Assembly? Load(AssemblyName name) {
+            protected override Assembly? Load(AssemblyName assemblyName) {
                 return null;
             }
 

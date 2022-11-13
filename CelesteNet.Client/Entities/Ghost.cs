@@ -392,8 +392,7 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
                 return;
             }
 
-            if (Holding == null)
-                Holding = new(this);
+            Holding ??= new(this);
             Holding.Position = h.Position;
             Holding.UpdateSprite(h.Scale, h.Depth, h.Color, h.SpriteRate, h.SpriteJustify, h.SpriteID, h.CurrentAnimationID, h.CurrentAnimationFrame);
         }
@@ -404,7 +403,7 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
                 level.Paused || level.Overlay != null ||
                 CelesteNetClientModule.Settings.PlayerOpacity == 0)
                 return;
-            level.Add(new GhostDeadBody(this, Vector2.Zero, Alpha));
+            level.Add(new GhostDeadBody(this, Alpha));
         }
 
     }

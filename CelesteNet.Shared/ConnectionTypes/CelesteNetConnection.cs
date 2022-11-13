@@ -72,7 +72,7 @@ namespace Celeste.Mod.CelesteNet {
         public abstract string ID { get; }
         public abstract string UID { get; }
 
-        public CelesteNetConnection(DataContext data) {
+        protected CelesteNetConnection(DataContext data) {
             Data = data;
 
             StackTrace trace = new();
@@ -242,7 +242,7 @@ namespace Celeste.Mod.CelesteNet {
 
                 _BackQueue = new();
                 InMergeWindow = FlushingQueue = false;
-                if (FrontQueue.Count > 0)
+                if (!FrontQueue.IsEmpty)
                     Flush();
             }
         }

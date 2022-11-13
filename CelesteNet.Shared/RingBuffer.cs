@@ -9,7 +9,7 @@ using YamlDotNet.Serialization.ObjectFactories;
 namespace Celeste.Mod.CelesteNet {
     public class RingBuffer<T> {
 
-        public readonly T[] Data;
+        private readonly T[] Data;
 
         public int Length => Data.Length;
         public int Position { get; private set; }

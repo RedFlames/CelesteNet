@@ -12,7 +12,7 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
 
         private static readonly char[] IconPathsSeperator = new[] { ' ' };
 
-        public static float Size = 256f;
+        public static readonly float Size = 256f;
 
         public Entity Tracking;
 

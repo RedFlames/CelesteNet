@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataDashTrail : DataType<DataDashTrail> {
 
-        static DataDashTrail() {
-            DataID = "dashTrail";
-        }
+        public static new readonly string DataID = "dashTrail";
 
         public override DataFlags DataFlags => DataFlags.Unreliable | DataFlags.CoreType | DataFlags.Taskable;
 

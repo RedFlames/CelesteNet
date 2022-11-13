@@ -1,9 +1,7 @@
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataLowLevelStringMap : DataType<DataLowLevelStringMap> {
 
-        static DataLowLevelStringMap() {
-            DataID = "stringMap";
-        }
+        public static new readonly string DataID = "stringMap";
 
         public override DataFlags DataFlags => DataFlags.CoreType;
 

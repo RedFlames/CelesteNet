@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataMapModInfo : DataType<DataMapModInfo>, IDataRequestable<DataMapModInfoRequest> {
 
-        static DataMapModInfo() {
-            DataID = "mapModInfo";
-        }
+        public static new readonly string DataID = "mapModInfo";
 
         public override DataFlags DataFlags => DataFlags.Taskable;
 
@@ -56,9 +54,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public class DataMapModInfoRequest : DataType<DataMapModInfoRequest> {
 
-        static DataMapModInfoRequest() {
-            DataID = "mapModInfoReq";
-        }
+        public static new readonly string DataID = "mapModInfoReq";
 
         public uint ID = uint.MaxValue;
 

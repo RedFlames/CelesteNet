@@ -61,7 +61,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             Client?.Send(new DataMapModInfo {
                 RequestID = request.ID
             });
-            return;
         }
 
         public void Handle(CelesteNetConnection con, DataModRec rec) {

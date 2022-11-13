@@ -12,9 +12,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataChat : DataType<DataChat> {
 
-        static DataChat() {
-            DataID = "chat";
-        }
+        public static new readonly string DataID = "chat";
 
         public override DataFlags DataFlags => DataFlags.Taskable;
 

@@ -198,7 +198,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public void SendPingRequest() {
             // Send ping request packet
-            DataLowLevelPingRequest pingRequest = new DataLowLevelPingRequest() {
+            DataLowLevelPingRequest pingRequest = new() {
                 PingTime = Server.ThreadPool.RuntimeWatch.ElapsedMilliseconds
             };
 
@@ -324,7 +324,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public void FlushTCPSendQueue() {
             using (Utilize(out bool alive)) {
-                if (!alive || !IsConnected || TCPQueue.BackQueue.Count <= 0)
+                if (!alive || !IsConnected || TCPQueue.BackQueue.IsEmpty)
                     return;
 
                 if (TCPSendBufferNumBytes > 0 || TCPSendBufferNumPackets > 0)
@@ -377,7 +377,7 @@ namespace Celeste.Mod.CelesteNet.Server {
                 }
 
                 // Set the queue delay
-                if (TCPQueue.BackQueue.Count <= 0)
+                if (TCPQueue.BackQueue.IsEmpty)
                     TCPSendQueueDelay = -1f;
                 else
                     TCPSendQueueDelay = TCPSendCapDelay;

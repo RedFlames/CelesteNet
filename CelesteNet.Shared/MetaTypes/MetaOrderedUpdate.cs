@@ -11,9 +11,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class MetaOrderedUpdate : MetaType<MetaOrderedUpdate> {
 
-        static MetaOrderedUpdate() {
-            MetaID = "ordered";
-        }
+        public static new readonly string MetaID = "ordered";
 
         public uint ID;
         public byte? UpdateID;

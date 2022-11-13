@@ -127,7 +127,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             }
 
             pos = anchor + new Vector2(48f, 0f);
-            string text = this.text;
             if (!string.IsNullOrEmpty(text) && Dialog.Language != null && CelesteNetClientFont.Font != null) {
                 Vector2 size = CelesteNetClientFont.Measure(text);
                 CelesteNetClientFont.DrawOutline(text, pos + new Vector2(size.X * 0.5f, 0f), new(0.5f, 0.5f), Vector2.One * MathHelper.Lerp(0.8f, 1f, Ease.CubeOut(a)), Color.White * a, 2f, Color.Black * a * a * a * a);

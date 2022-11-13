@@ -52,7 +52,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
                 builder
                     .Append(prefix)
                     .Append(cmd.ID)
-                    .Append(" ")
+                    .Append(' ')
                     .Append(cmd.Args)
                     .AppendLine();
             }
@@ -60,7 +60,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
             builder
                 .Append("Page ")
                 .Append(page + 1)
-                .Append("/")
+                .Append('/')
                 .Append(pages);
 
             return builder.ToString().Trim();
@@ -84,7 +84,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
             builder
                 .Append(prefix)
                 .Append(cmd.ID)
-                .Append(" ")
+                .Append(' ')
                 .Append(cmd.Args)
                 .AppendLine()
                 .AppendLine(cmd.Help);

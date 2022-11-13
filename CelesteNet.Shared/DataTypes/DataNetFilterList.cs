@@ -12,9 +12,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataNetFilterList : DataType<DataNetFilterList> {
 
-        static DataNetFilterList() {
-            DataID = "filterList";
-        }
+        public static new readonly string DataID = "filterList";
 
         public override DataFlags DataFlags => DataFlags.Taskable;
 

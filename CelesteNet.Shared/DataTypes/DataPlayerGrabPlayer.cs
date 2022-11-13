@@ -15,9 +15,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
         public const byte MaxGrabStrength = 1 << 7 - 1;
 
-        static DataPlayerGrabPlayer() {
-            DataID = "playerGrabPlayer";
-        }
+        public static new readonly string DataID = "playerGrabPlayer";
 
         // Too many too quickly to make tasking worth it.
         public override DataFlags DataFlags => DataFlags.Unreliable | DataFlags.CoreType | DataFlags.Small | DataFlags.NoStandardMeta;

@@ -97,7 +97,6 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
                 if (msg.Text.IsNullOrEmpty())
                     return null;
 
-                msg.Text.Replace("\r", "").Replace("\n", "");
                 if (msg.Text.Length > Settings.MaxChatTextLength)
                     msg.Text = msg.Text.Substring(0, Settings.MaxChatTextLength);
 

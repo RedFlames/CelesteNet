@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataConnectionInfo : DataType<DataConnectionInfo> {
 
-        static DataConnectionInfo() {
-            DataID = "conInfo";
-        }
+        public static new readonly string DataID = "conInfo";
 
         public override DataFlags DataFlags => DataFlags.CoreType;
 

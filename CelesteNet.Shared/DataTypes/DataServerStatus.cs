@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataServerStatus : DataType<DataServerStatus> {
 
-        static DataServerStatus() {
-            DataID = "serverStatus";
-        }
+        public static new readonly string DataID = "serverStatus";
 
         public string Text = "";
         public float Time;

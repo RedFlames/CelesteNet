@@ -16,7 +16,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         public readonly CelesteNetServer Server;
 
-        public UserData(CelesteNetServer server) {
+        protected UserData(CelesteNetServer server) {
             Server = server;
         }
 

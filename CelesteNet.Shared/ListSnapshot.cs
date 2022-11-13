@@ -16,7 +16,7 @@ namespace Celeste.Mod.CelesteNet {
 
         internal bool Disposed;
         public readonly ListSnapshotPool<T> Pool;
-        public readonly List<T> List = new();
+        public List<T> List = new();
 
         public ListSnapshot(ListSnapshotPool<T> pool) {
             Pool = pool;

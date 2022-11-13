@@ -21,7 +21,7 @@ namespace Celeste.Mod.CelesteNet.Client {
         public readonly DataContext Data;
 
         public CelesteNetConnection Con;
-        public readonly IConnectionFeature[] ConFeatures;
+        private readonly IConnectionFeature[] ConFeatures;
         public volatile bool EndOfStream = false, SafeDisposeTriggered = false;
 
         private bool _IsAlive;

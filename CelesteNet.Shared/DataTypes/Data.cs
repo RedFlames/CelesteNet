@@ -142,13 +142,8 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public abstract class DataType<T> : DataType where T : DataType<T> {
 
-        public static string DataID;
-        public static string DataSource;
-
-        static DataType() {
-            DataID = typeof(T).Name;
-            DataSource = typeof(T).Assembly.GetName().Name ?? DataID;
-        }
+        public static readonly string DataID = typeof(T).Name;
+        public static readonly string DataSource = typeof(T).Assembly.GetName().Name ?? DataID;
 
         public T ReadT(CelesteNetBinaryReader reader) {
             Read(reader);

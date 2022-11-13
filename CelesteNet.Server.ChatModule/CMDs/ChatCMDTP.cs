@@ -62,15 +62,15 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
 
             other.Request<DataSession>(400,
                 (con, session) => other.WaitFor<DataPlayerFrame>(300,
-                    (con, frame) => Teleport(env, msg, self, other, otherPlayer, otherState, session, frame.Position),
-                    () => Teleport(env, msg, self, other, otherPlayer, otherState, session, null)
+                    (con, frame) => Teleport(msg, self, other, otherPlayer, otherState, session, frame.Position),
+                    () => Teleport(msg, self, other, otherPlayer, otherState, session, null)
                 ),
-                () => Teleport(env, msg, self, other, otherPlayer, otherState, null, null)
+                () => Teleport(msg, self, other, otherPlayer, otherState, null, null)
             );
             return true;
         }
 
-        private bool Teleport(ChatCMDEnv env, DataChat? msg, CelesteNetPlayerSession self, CelesteNetPlayerSession other, DataPlayerInfo otherPlayer, DataPlayerState otherState, DataSession? tpSession, Vector2? tpPos) {
+        private bool Teleport(DataChat? msg, CelesteNetPlayerSession self, CelesteNetPlayerSession other, DataPlayerInfo otherPlayer, DataPlayerState otherState, DataSession? tpSession, Vector2? tpPos) {
             if (msg != null) {
                 self.WaitFor<DataPlayerState>(6000, (con, state) => {
                     if (state.SID != otherState.SID ||

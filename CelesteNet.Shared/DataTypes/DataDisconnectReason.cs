@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataDisconnectReason : DataType<DataDisconnectReason> {
 
-        static DataDisconnectReason() {
-            DataID = "dcReason";
-        }
+        public static new readonly string DataID = "dcReason";
 
         public string Text = "";
 

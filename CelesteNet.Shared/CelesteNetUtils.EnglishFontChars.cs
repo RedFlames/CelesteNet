@@ -18,7 +18,7 @@ namespace Celeste.Mod.CelesteNet {
 
         // Yes, this is better than trying to find the original font file and parsing it.
 
-        public static readonly char[] EnglishFontChars = new int[] {
+        public static readonly IReadOnlyList<char> EnglishFontChars = new int[] {
             0x0020, //  
             0x0021, // !
             0x0022, // "
@@ -328,7 +328,6 @@ namespace Celeste.Mod.CelesteNet {
             0x2265, // ≥
         }.Select(i => (char) i).ToArray();
 
-        public static readonly HashSet<char> EnglishFontCharsSet = new(EnglishFontChars);
-
+        public static readonly IReadOnlyCollection<char> EnglishFontCharsSet = (IReadOnlyCollection<char>) new HashSet<char>(EnglishFontChars);
     }
 }

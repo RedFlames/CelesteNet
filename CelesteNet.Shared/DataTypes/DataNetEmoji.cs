@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataNetEmoji : DataType<DataNetEmoji> {
 
-        static DataNetEmoji() {
-            DataID = "netemoji";
-        }
+        public static new readonly string DataID = "netemoji";
 
         public const int MaxSequenceNumber = 128;
 

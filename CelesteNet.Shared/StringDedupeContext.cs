@@ -16,20 +16,19 @@ namespace Celeste.Mod.CelesteNet {
 
         public class DedupeInfo {
             public int Refs;
-            public readonly List<string> Strings = new();
+            public List<string> Strings = new();
         }
 
-        public readonly Dictionary<int, DedupeInfo> Map = new();
+        public Dictionary<int, DedupeInfo> Map = new();
 
         private readonly Dictionary<int, int> Counting = new();
         private readonly List<ulong> CountingUpdates = new();
 
-        private ulong ToCountingUpdate(int key, int value)
-            => 0 |
-            ((ulong) (uint) key     << 32) |
-            ((ulong) (uint) value   << 0);
+        private static ulong ToCountingUpdate(int key, int value)
+            => ((ulong) (uint) key     << 32) |
+               ((ulong) (uint) value   << 0);
 
-        private void FromCountingUpdate(ulong update, out int key, out int value) {
+        private static void FromCountingUpdate(ulong update, out int key, out int value) {
             key =   (int) (uint) ((update >> 32)    & 0xffffffff);
             value = (int) (uint) ((update >> 0)     & 0xffffffff);
         }

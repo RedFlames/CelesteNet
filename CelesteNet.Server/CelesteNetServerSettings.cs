@@ -15,7 +15,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         [YamlIgnore]
         [JsonIgnore]
-        public static string DefaultFilePath = "celestenet-config.yaml";
+        public static readonly string DefaultFilePath = "celestenet-config.yaml";
 
         public override void Load(string path = "") {
             base.Load(path.Nullify() ?? FilePath.Nullify() ?? DefaultFilePath);

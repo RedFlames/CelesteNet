@@ -3,10 +3,8 @@ using System;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataLowLevelCoreTypeMap : DataType<DataLowLevelCoreTypeMap> {
 
-        static DataLowLevelCoreTypeMap() {
-            // TODO Change this to "coreTypeMap" in the next protocol-breaking version
-            DataID = "slimMap";
-        }
+        // TODO Change this to "coreTypeMap" in the next protocol-breaking version
+        public static new readonly string DataID = "slimMap";
 
         public override DataFlags DataFlags => DataFlags.Small;
 

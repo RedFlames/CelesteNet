@@ -27,7 +27,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
             => new {
                 msg.ID,
                 PlayerID = msg.Player?.ID ?? uint.MaxValue,
-                Targets = msg.Targets?.Select(p => p?.ID ?? uint.MaxValue) ?? null,
+                Targets = msg.Targets?.Select(p => p?.ID ?? uint.MaxValue),
                 Color = msg.Color.ToHex(),
                 DateTime = msg.Date.ToUnixTime(),
                 msg.Tag,

@@ -76,7 +76,7 @@ namespace Celeste.Mod.CelesteNet {
 
         [ThreadStatic]
         private static char[]? sanitizedShared;
-        public static unsafe string Sanitize(this string? value, HashSet<char>? illegal = null, bool space = false) {
+        public static unsafe string Sanitize(this string? value, IReadOnlyCollection<char>? illegal = null, bool space = false) {
             const int buffer = 64;
 
             if (value.IsNullOrEmpty())
@@ -254,7 +254,7 @@ namespace Celeste.Mod.CelesteNet {
         public const char FreeFirst = '\x10';
         public const char Last = '\x1f';
 
-        public static readonly string[] Strings = _GenerateStrings();
+        public static readonly IReadOnlyList<string> Strings = _GenerateStrings();
         private static string[] _GenerateStrings() {
             string[] all = new string[0x20];
             for (int i = 0; i < all.Length; i++)

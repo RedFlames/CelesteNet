@@ -9,7 +9,7 @@ using Celeste.Mod.Helpers;
 
 namespace Celeste.Mod.CelesteNet.Server.Control {
     public class WSCommands {
-        public readonly Dictionary<string, WSCMD> All = new Dictionary<string, WSCMD>();
+        public readonly Dictionary<string, WSCMD> All = new();
 
         public WSCommands(FrontendWebSocket ws) {
             foreach (Type type in CelesteNetUtils.GetTypes()) {

@@ -35,7 +35,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             Server.OnSessionStart += OnSessionStart;
         }
 
-        public void Start() {
+        public static void Start() {
             Logger.Log(LogLevel.INF, "channels", "Startup");
         }
 

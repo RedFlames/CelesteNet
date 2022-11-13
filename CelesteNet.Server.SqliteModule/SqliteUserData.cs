@@ -16,7 +16,7 @@ using System.Transactions;
 namespace Celeste.Mod.CelesteNet.Server.Sqlite {
     public sealed class SqliteUserData : UserData {
 
-        public static readonly HashSet<char> Illegal = new("`´'\"^[]\\//");
+        private static readonly IReadOnlyCollection<char> Illegal = new HashSet<char>("`´'\"^[]\\//");
 
         public readonly object GlobalLock = new();
 

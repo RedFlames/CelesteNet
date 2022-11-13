@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataLowLevelPingRequest : DataType<DataLowLevelPingRequest> {
 
-        static DataLowLevelPingRequest() {
-            DataID = "pingRequest";
-        }
+        public static new readonly string DataID = "pingRequest";
 
         public override DataFlags DataFlags => DataFlags.CoreType;
 

@@ -73,7 +73,7 @@ To go back to the default channel, {Chat.Settings.CommandPrefix}{ID} {Chat.Serve
                 builder
                     .Append("Page ")
                     .Append(page + 1)
-                    .Append("/")
+                    .Append('/')
                     .Append(pages);
 
                 env.Send(builder.ToString().Trim());

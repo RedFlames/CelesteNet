@@ -23,7 +23,7 @@ namespace Celeste.Mod.CelesteNet.Client {
 
         private static ConditionalWeakTable<Sprite, SpriteExt> SpriteExts = new();
 
-        public static Dictionary<string, SpriteMeta> SpriteMetas = new() {
+        private static Dictionary<string, SpriteMeta> SpriteMetas = new() {
             { "glider", new SpriteMeta {
                 ForceOutline = true
             } },
@@ -67,7 +67,7 @@ namespace Celeste.Mod.CelesteNet.Client {
             return SpriteMetas[id] = new();
         }
 
-        private class SpriteExt {
+        private sealed class SpriteExt {
             public string ID;
         }
 

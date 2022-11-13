@@ -173,7 +173,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 Ghosts.TryRemove(player.ID, out _);
                 LastFrames.TryRemove(player.ID, out _);
                 Client.Data.FreeOrder<DataPlayerFrame>(player.ID);
-                return;
             }
         }
 
@@ -770,13 +769,11 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
             if (Player.Holding?.Entity is Ghost ghost && ghost.Scene != level)
                 Player.Holding = null;
 
-            if (IsGrabbed && !idle && Player.StateMachine.State == Player.StFrozen) {
-                if (Input.Jump.Pressed) {
-                    Player.StateMachine.State = Player.StNormal;
-                    Player.Jump(true, true);
-                    GrabCooldown = GrabCooldownMax;
-                    SendReleaseMe();
-                }
+            if (IsGrabbed && !idle && Player.StateMachine.State == Player.StFrozen && Input.Jump.Pressed) {
+                Player.StateMachine.State = Player.StNormal;
+                Player.Jump(true, true);
+                GrabCooldown = GrabCooldownMax;
+                SendReleaseMe();
             }
 
             if (PlayerNameTag == null || PlayerNameTag.Tracking != Player || PlayerNameTag.Scene != level) {

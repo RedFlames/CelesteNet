@@ -16,7 +16,7 @@ namespace Celeste.Mod.CelesteNet.Server {
 
         }
 
-        private class Worker : RoleWorker {
+        private sealed class Worker : RoleWorker {
 
             public new TCPReceiverRole Role => (TCPReceiverRole) base.Role;
 

@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataSession : DataType<DataSession>, IDataRequestable<DataSessionRequest> {
 
-        static DataSession() {
-            DataID = "session";
-        }
+        public static new readonly string DataID = "session";
 
         public uint RequestID = uint.MaxValue;
 
@@ -234,9 +232,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
 
     public class DataSessionRequest : DataType<DataSessionRequest> {
 
-        static DataSessionRequest() {
-            DataID = "sessionReq";
-        }
+        public static new readonly string DataID = "sessionReq";
 
         public uint ID = uint.MaxValue;
 

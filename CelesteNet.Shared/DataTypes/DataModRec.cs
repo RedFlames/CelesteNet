@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataModRec : DataType<DataModRec> {
 
-        static DataModRec() {
-            DataID = "modRec";
-        }
+        public static new readonly string DataID = "modRec";
 
         public string ModID = "";
         public string ModName = "";

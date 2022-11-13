@@ -11,9 +11,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class MetaRef : MetaType<MetaRef> {
 
-        static MetaRef() {
-            MetaID = "ref";
-        }
+        public static new readonly string MetaID = "ref";
 
         public uint ID;
         public bool IsAlive;

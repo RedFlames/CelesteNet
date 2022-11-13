@@ -123,7 +123,7 @@ namespace Celeste.Mod.CelesteNet.Client {
                 _AsPointerHelper = asm.GetType(@fullName).GetMethod(@name);
             }
 
-            _AsPointer<T> generated = _AsPointerHelper.MakeGenericMethod(typeof(T)).CreateDelegate<_AsPointer<T>>() as _AsPointer<T>;
+            _AsPointer<T> generated = _AsPointerHelper.MakeGenericMethod(typeof(T)).CreateDelegate<_AsPointer<T>>();
             lock (_AsPointerCache)
                 _AsPointerCache[typeof(T)] = generated;
             return generated(ref value);
@@ -185,7 +185,7 @@ namespace Celeste.Mod.CelesteNet.Client {
                 _AsRefHelper = asm.GetType(@fullName).GetMethod(@name);
             }
 
-            _AsRef<T> generated = _AsRefHelper.MakeGenericMethod(typeof(T)).CreateDelegate<_AsRef<T>>() as _AsRef<T>;
+            _AsRef<T> generated = _AsRefHelper.MakeGenericMethod(typeof(T)).CreateDelegate<_AsRef<T>>();
             lock (_AsRefCache)
                 _AsRefCache[typeof(T)] = generated;
             return ref generated(value);

@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.Server {
     public class CelesteNetPlayerSession : IDisposable {
 
-        public static readonly HashSet<char> IllegalNameChars = new() { ':', '#', '|' };
+        public static readonly IReadOnlyCollection<char> IllegalNameChars = (IReadOnlyCollection<char>) new HashSet<char>() { ':', '#', '|' };
 
         public readonly CelesteNetServer Server;
         public readonly CelesteNetConnection Con;

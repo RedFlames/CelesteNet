@@ -116,8 +116,7 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                 FakeRT = null;
             }
 
-            if (FakeRT == null) {
-                FakeRT = new(
+            FakeRT ??= new(
                     GraphicsDevice,
                     Engine.ViewWidth,
                     Engine.ViewHeight,
@@ -127,7 +126,6 @@ namespace Celeste.Mod.CelesteNet.Client.Components {
                     0,
                     RenderTargetUsage.DiscardContents
                 );
-            }
 
             return FakeRT;
         }

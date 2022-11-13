@@ -7,23 +7,21 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
     public class GhostDeadBody : Entity {
         private Color initialHairColor;
 
-        private Vector2 bounce = Vector2.Zero;
+        private readonly Ghost player;
 
-        private Ghost player;
+        private readonly PlayerHair hair;
 
-        private PlayerHair hair;
-
-        private PlayerSprite sprite;
+        private readonly PlayerSprite sprite;
 
         private DeathEffect deathEffect;
 
-        private Facings facing;
+        private readonly Facings facing;
 
-        private float scale = 1f;
+        private readonly float scale = 1f;
 
-        private float Alpha = 1f;
+        private readonly float Alpha;
 
-        public GhostDeadBody(Ghost player, Vector2 direction, float alpha = 1f) {
+        public GhostDeadBody(Ghost player, float alpha = 1f) {
             Depth = -1000000;
             this.player = player;
             facing = player.Hair.Facing;
@@ -32,7 +30,6 @@ namespace Celeste.Mod.CelesteNet.Client.Entities {
             Add(sprite = player.Sprite);
             sprite.Color = Color.White * alpha;
             initialHairColor = hair.Color * alpha;
-            bounce = direction;
             Alpha = alpha;
             hair.Alpha = Alpha;
             Add(new Coroutine(DeathRoutine()));

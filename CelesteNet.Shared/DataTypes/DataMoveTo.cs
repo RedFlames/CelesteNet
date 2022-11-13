@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataMoveTo : DataType<DataMoveTo> {
 
-        static DataMoveTo() {
-            DataID = "playerMoveTo";
-        }
+        public static new readonly string DataID = "playerMoveTo";
 
         public bool Force;
         public string SID = "";

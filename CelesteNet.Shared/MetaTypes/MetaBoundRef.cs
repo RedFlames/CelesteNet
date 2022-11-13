@@ -11,9 +11,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class MetaBoundRef : MetaType<MetaBoundRef> {
 
-        static MetaBoundRef() {
-            MetaID = "bound";
-        }
+        public static new readonly string MetaID = "bound";
 
         public string TypeBoundTo = "";
         public uint ID;

@@ -34,9 +34,9 @@ namespace Celeste.Mod.CelesteNet.Server {
         public readonly Channels Channels;
 
         public bool Initialized = false;
-        public readonly List<CelesteNetServerModuleWrapper> ModuleWrappers = new();
-        public readonly List<CelesteNetServerModule> Modules = new();
-        public readonly Dictionary<Type, CelesteNetServerModule> ModuleMap = new();
+        public List<CelesteNetServerModuleWrapper> ModuleWrappers = new();
+        public List<CelesteNetServerModule> Modules = new();
+        public Dictionary<Type, CelesteNetServerModule> ModuleMap = new();
         public readonly FileSystemWatcher ModulesFSWatcher;
 
         public readonly DetourModManager DetourModManager;
@@ -44,11 +44,11 @@ namespace Celeste.Mod.CelesteNet.Server {
         public int PlayerCounter = 0;
         public readonly TokenGenerator ConTokenGenerator = new();
         public readonly RWLock ConLock = new();
-        public readonly HashSet<CelesteNetConnection> Connections = new();
-        public readonly BlockingCollection<CelesteNetConnection> SafeDisposeQueue = new();
-        public readonly HashSet<CelesteNetPlayerSession> Sessions = new();
-        public readonly ConcurrentDictionary<CelesteNetConnection, CelesteNetPlayerSession> PlayersByCon = new();
-        public readonly ConcurrentDictionary<uint, CelesteNetPlayerSession> PlayersByID = new();
+        public HashSet<CelesteNetConnection> Connections = new();
+        public BlockingCollection<CelesteNetConnection> SafeDisposeQueue = new();
+        public HashSet<CelesteNetPlayerSession> Sessions = new();
+        public ConcurrentDictionary<CelesteNetConnection, CelesteNetPlayerSession> PlayersByCon = new();
+        public ConcurrentDictionary<uint, CelesteNetPlayerSession> PlayersByID = new();
         private readonly System.Timers.Timer HeartbeatTimer, PingRequestTimer;
 
         public float CurrentTickRate { get; private set; }
@@ -332,7 +332,7 @@ namespace Celeste.Mod.CelesteNet.Server {
                         // Whoops, it probably wasn't important anyway.
                         Logger.Log(LogLevel.DEV, "main", $"Broadcast (sync) failed:\n{data}\n{con}\n{e}");
                     }
-                };
+                }
         }
 
         public void BroadcastAsync(DataType data) {

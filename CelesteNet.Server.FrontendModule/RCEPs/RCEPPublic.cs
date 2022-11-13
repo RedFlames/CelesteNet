@@ -29,10 +29,9 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         [RCEndpoint(false, "/discordauth", "", "", "Discord OAuth2", "User auth using Discord.")]
         public static void DiscordOAuth(Frontend f, HttpRequestEventArgs c) {
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
 
             if (args.Count == 0) {
-                // c.Response.Redirect(f.Settings.OAuthURL);
                 c.Response.StatusCode = (int) HttpStatusCode.Redirect;
                 c.Response.Headers.Set("Location", f.Settings.DiscordOAuthURL);
                 f.RespondJSON(c, new {
@@ -104,7 +103,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
                     userData = f.Serializer.Deserialize<dynamic>(jtr);
             }
 
-            if (!(userData?.id?.ToString() is string uid) ||
+            if (userData?.id?.ToString() is not string uid ||
                 uid.IsNullOrEmpty()) {
                 Logger.Log(LogLevel.CRI, "frontend-discordauth", $"Failed to obtain ID: {userData}");
                 c.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
@@ -179,7 +178,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
         public static void UserInfo(Frontend f, HttpRequestEventArgs c) {
             bool auth = f.IsAuthorized(c);
 
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
 
             string? uid = args["uid"];
             if (uid.IsNullOrEmpty()) {
@@ -227,7 +226,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         [RCEndpoint(false, "/revokekey", "?key={key}", "", "Revoke Key", "Revoke the given key.")]
         public static void RevokeKey(Frontend f, HttpRequestEventArgs c) {
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
 
             string? key = args["key"];
             if (key.IsNullOrEmpty())
@@ -257,7 +256,7 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
 
         [RCEndpoint(false, "/avatar", "?uid={uid}&fallback={true|false}", "", "Get Avatar", "Get a 64x64 round user avatar PNG.")]
         public static void Avatar(Frontend f, HttpRequestEventArgs c) {
-            NameValueCollection args = f.ParseQueryString(c.Request.RawUrl);
+            NameValueCollection args = Frontend.ParseQueryString(c.Request.RawUrl);
 
             string? uid = args["uid"];
             if (uid.IsNullOrEmpty()) {

@@ -227,7 +227,7 @@ header {
 
         #region Default RCEndPoint Handlers
 
-        public static List<RCEndPoint> EndPoints = new() {
+        private static readonly List<RCEndPoint> EndPoints = new() {
 
                 new RCEndPoint {
                     Path = "/",

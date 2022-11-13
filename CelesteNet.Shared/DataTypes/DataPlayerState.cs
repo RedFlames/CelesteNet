@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataPlayerState : DataType<DataPlayerState> {
 
-        static DataPlayerState() {
-            DataID = "playerState";
-        }
+        public static new readonly string DataID = "playerState";
 
         public override DataFlags DataFlags => DataFlags.Taskable;
 

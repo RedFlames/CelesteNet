@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataPlayerFrame : DataType<DataPlayerFrame> {
 
-        static DataPlayerFrame() {
-            DataID = "playerFrame";
-        }
+        public static new readonly string DataID = "playerFrame";
 
         // Too many too quickly to make tasking worth it.
         public override DataFlags DataFlags => DataFlags.Unreliable | DataFlags.CoreType | DataFlags.NoStandardMeta;
@@ -63,7 +61,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
         }
 
         public override void ReadAll(CelesteNetBinaryReader reader) {
-            Color UnpackColor(ushort packedCol) => new() {
+            static Color UnpackColor(ushort packedCol) => new() {
                 R = (byte) (((packedCol >> 0) & 0b11111) << 3),
                 G = (byte) (((packedCol >> 5) & 0b11111) << 3),
                 B = (byte) (((packedCol >> 10) & 0b11111) << 3),
@@ -150,7 +148,7 @@ namespace Celeste.Mod.CelesteNet.DataTypes {
         }
 
         public override void WriteAll(CelesteNetBinaryWriter writer) {
-            ushort PackColor(Color col) => (ushort) (
+            static ushort PackColor(Color col) => (ushort) (
                 (col.R >> 3) << 0 |
                 (col.G >> 3) << 5 |
                 (col.B >> 3) << 10

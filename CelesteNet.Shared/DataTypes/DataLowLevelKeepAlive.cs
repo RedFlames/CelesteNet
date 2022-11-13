@@ -3,9 +3,7 @@ using System;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataLowLevelKeepAlive : DataType<DataLowLevelKeepAlive> {
 
-        static DataLowLevelKeepAlive() {
-            DataID = "keepAlive";
-        }
+        public static new readonly string DataID = "keepAlive";
 
         public override DataFlags DataFlags => DataFlags.CoreType | DataFlags.Small;
 

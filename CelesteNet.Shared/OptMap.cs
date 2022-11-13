@@ -31,8 +31,8 @@ namespace Celeste.Mod.CelesteNet {
 
         public readonly string Name;
 
-        public readonly ConcurrentDictionary<int, T> MapRead = new();
-        public readonly ConcurrentDictionary<T, int> MapWrite = new();
+        public ConcurrentDictionary<int, T> MapRead = new();
+        public ConcurrentDictionary<T, int> MapWrite = new();
 
         private readonly Dictionary<T, int> Counting = new();
         private readonly HashSet<T> Pending = new();

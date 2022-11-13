@@ -21,7 +21,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             FlushTCPQueue, FlushTCPBuffer, FlushUDPQueue
         }
 
-        private class Worker : RoleWorker {
+        private sealed class Worker : RoleWorker {
 
             private readonly MemoryStream PacketStream;
             private readonly CelesteNetBinaryWriter PacketWriter;
@@ -57,7 +57,7 @@ namespace Celeste.Mod.CelesteNet.Server {
                                         con.FlushTCPSendBuffer();
                                     } break;
                                     case SendAction.FlushUDPQueue: {
-                                        FlushUDPSendQueue(con, token);
+                                        FlushUDPSendQueue(con);
                                     } break;
                                 }
                             } catch (Exception e) {
@@ -87,7 +87,7 @@ namespace Celeste.Mod.CelesteNet.Server {
                 }
             }
 
-            private void FlushUDPSendQueue(ConPlusTCPUDPConnection con, CancellationToken token) {
+            private void FlushUDPSendQueue(ConPlusTCPUDPConnection con) {
                 int byteCounter = 0, packetCounter = 0;
                 lock (con.UDPLock) {
                     // TODO This could be optimized with sendmmsg

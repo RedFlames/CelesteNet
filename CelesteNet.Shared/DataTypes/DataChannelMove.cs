@@ -13,9 +13,7 @@ using System.Threading.Tasks;
 namespace Celeste.Mod.CelesteNet.DataTypes {
     public class DataChannelMove : DataType<DataChannelMove> {
 
-        static DataChannelMove() {
-            DataID = "channelMove";
-        }
+        public static new readonly string DataID = "channelMove";
 
         public DataPlayerInfo? Player;
 

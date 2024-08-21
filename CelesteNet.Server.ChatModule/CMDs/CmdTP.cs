@@ -58,12 +58,27 @@ namespace Celeste.Mod.CelesteNet.Server.Chat.Cmd {
 
             DataChat? msg = env.Send($"Teleporting to {OtherPlayer.FullName}");
 
+            Logger.Log(LogLevel.VVV, "teleport", $"Run with '{args?.Count}' arguments: {args}");
+            Logger.Log(LogLevel.VVV, "teleport", $"self / other vars: {self} / {Other} / {OtherPlayer} / {OtherState}");
+
             self.Request<DataSession>(400,
-                (con, session) => self.WaitFor<DataPlayerFrame>(400,
-                    (con, frame) => SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, session, frame.Position),
-                    () => SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, session, null)
-                ),
-                () => SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, null, null)
+                (con, session) => {
+                    Logger.Log(LogLevel.VVV, "teleport", $"self DataSession request success: {session}. Waiting for frame...");
+                    self.WaitFor<DataPlayerFrame>(400,
+                        (con, frame) => {
+                            Logger.Log(LogLevel.VVV, "teleport", $"self WaitFor frame success: {frame}.");
+                            return SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, session, frame.Position);
+                        },
+                        () => {
+                            Logger.Log(LogLevel.VVV, "teleport", $"self WaitFor frame unsuccessful...");
+                            SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, session, null);
+                        }
+                    );
+                },
+                () => {
+                    Logger.Log(LogLevel.VVV, "teleport", $"self DataSession request unsuccessful...");
+                    SaveAndTeleport(env, msg, self, Other, OtherPlayer, OtherState, null, null);
+                }
             );
         }
 
@@ -74,12 +89,26 @@ namespace Celeste.Mod.CelesteNet.Server.Chat.Cmd {
                 Position = savedPos
             });
 
+            Logger.Log(LogLevel.VVV, "teleport", $"Updated tpHistory: {env.State} / {savedSession} / {savedPos}. Requesting other session...");
+
             other.Request<DataSession>(400,
-                (con, session) => other.WaitFor<DataPlayerFrame>(300,
-                    (con, frame) => Teleport(env, msg, self, other, otherPlayer, otherState, session, frame.Position),
-                    () => Teleport(env, msg, self, other, otherPlayer, otherState, session, null)
-                ),
-                () => Teleport(env, msg, self, other, otherPlayer, otherState, null, null)
+                (con, session) => {
+                    Logger.Log(LogLevel.VVV, "teleport", $"other DataSession request success: {session}. Waiting for frame...");
+                    other.WaitFor<DataPlayerFrame>(300,
+                        (con, frame) => {
+                            Logger.Log(LogLevel.VVV, "teleport", $"other WaitFor frame success: {frame}.");
+                            return Teleport(env, msg, self, other, otherPlayer, otherState, session, frame.Position);
+                        },
+                        () => {
+                            Logger.Log(LogLevel.VVV, "teleport", $"other WaitFor frame unsuccessful...");
+                            Teleport(env, msg, self, other, otherPlayer, otherState, session, null);
+                        }
+                    );
+                },
+                () => {
+                    Logger.Log(LogLevel.VVV, "teleport", $"other DataSession request unsuccessful...");
+                    Teleport(env, msg, self, other, otherPlayer, otherState, null, null);
+                }
             );
             return true;
         }
@@ -87,20 +116,26 @@ namespace Celeste.Mod.CelesteNet.Server.Chat.Cmd {
         private bool Teleport(CmdEnv env, DataChat? msg, CelesteNetPlayerSession self, CelesteNetPlayerSession other, DataPlayerInfo otherPlayer, DataPlayerState otherState, DataSession? tpSession, Vector2? tpPos) {
             if (msg != null) {
                 self.WaitFor<DataPlayerState>(6000, (con, state) => {
+                    Logger.Log(LogLevel.VVV, "teleport", $"self WaitFor State success: {state}.");
                     if (state.SID != otherState.SID ||
                         state.Mode != otherState.Mode ||
-                        state.Level != otherState.Level)
+                        state.Level != otherState.Level) {
+                        msg.Text = $"Teleport to {otherPlayer.FullName} failed(?)";
+                        Chat.ForceSend(msg);
                         return false;
+                    }
 
                     msg.Text = $"Teleported to {otherPlayer.FullName}";
                     Chat.ForceSend(msg);
                     return true;
 
                 }, () => {
+                    Logger.Log(LogLevel.VVV, "teleport", $"self WaitFor State unsuccessful.");
                     msg.Text = $"Couldn't teleport to {otherPlayer.FullName} - maybe missing map?";
                     Chat.ForceSend(msg);
 
                     other.Request<DataMapModInfo>(1000, (con, info) => {
+                        Logger.Log(LogLevel.VVV, "teleport", $"other MapModInfo request success: {info}.");
                         if (!string.IsNullOrEmpty(info.ModID))
                             self.Con.Send(new DataModRec {
                                 ModID = info.ModID,
@@ -111,13 +146,19 @@ namespace Celeste.Mod.CelesteNet.Server.Chat.Cmd {
                 });
             }
 
-            self.Con.Send(new DataMoveTo {
+
+
+            var moveTo = new DataMoveTo {
                 SID = otherState.SID,
                 Mode = otherState.Mode,
                 Level = otherState.Level,
                 Session = tpSession,
                 Position = tpPos
-            });
+            };
+
+            Logger.Log(LogLevel.VVV, "teleport", $"self sending MoveTo: {moveTo}.");
+
+            self.Con.Send(moveTo);
 
             return true;
         }

@@ -208,6 +208,9 @@ namespace Celeste.Mod.CelesteNet.Server {
             ThreadPool.Scheduler.OnPreScheduling += AdjustTickRate;
 
             Logger.Log(LogLevel.CRI, "main", "Ready");
+
+            for (int i = 0; i < 50; i++)
+                CreateDummySession($"dummy {i}");
         }
 
         public void Wait() {
@@ -284,6 +287,14 @@ namespace Celeste.Mod.CelesteNet.Server {
             return false;
         }
 
+        protected void CreateDummySession(string name = "dummy") {
+            DummyTCPUDPConnection con = new(this, name, "679687256860262445");
+            // Create the connection
+            HandleConnect(con);
+
+            // Create the session
+            CreateSession(con, "679687256860262445", name, new CelesteNetClientOptions());
+        }
 
         public event Action<CelesteNetServer, CelesteNetConnection>? OnConnect;
 

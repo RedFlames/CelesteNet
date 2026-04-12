@@ -104,6 +104,14 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
                 return;
             }
 
+            if (f.Server.UserData.TryLoad(uid, out BanInfo banInfo) && banInfo != null) {
+                c.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                f.RespondJSON(c, new {
+                    Error = "Unauthorized - access denied."
+                });
+                return;
+            }
+
             string key = f.Server.UserData.Create(uid, false);
             BasicUserInfo info = f.Server.UserData.Load<BasicUserInfo>(uid);
 
@@ -262,6 +270,14 @@ namespace Celeste.Mod.CelesteNet.Server.Control {
                 c.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
                 f.RespondJSON(c, new {
                     Error = "Unauthorized - invalid key."
+                });
+                return;
+            }
+
+            if (f.Server.UserData.TryLoad(uid, out BanInfo banInfo) && banInfo != null) {
+                c.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                f.RespondJSON(c, new {
+                    Error = "Unauthorized - access denied."
                 });
                 return;
             }

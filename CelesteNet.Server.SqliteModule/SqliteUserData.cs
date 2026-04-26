@@ -308,6 +308,7 @@ namespace Celeste.Mod.CelesteNet.Server.Sqlite {
                     default: {
                         using Stream stream = reader.GetStream(1);
                         value = MessagePackSerializer.Deserialize<T>(stream, MessagePackHelper.Options) ?? new();
+                        Logger.Log(LogLevel.DEV, "sqlite", $"Loaded MsgPack: {MessagePackSerializer.SerializeToJson<T>(value, MessagePackHelper.Options)}");
                         return true;
                     }
 

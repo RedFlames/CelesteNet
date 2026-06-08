@@ -286,7 +286,7 @@ namespace Celeste.Mod.CelesteNet.Server {
             public Dictionary<string, string> UIDs { get; set; } = new();
         }
 
-        public class PrivateUserInfo {
+        public class PrivateUserInfo : IUserDataType {
             public string Key { get; set; } = "";
             public string KeyFull { get; set; } = "";
         }

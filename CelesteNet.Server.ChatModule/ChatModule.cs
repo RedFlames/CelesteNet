@@ -476,7 +476,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat {
                     player.Con?.Send(blob);
         }
 
-        public class UserChatSettings {
+        public class UserChatSettings : IUserDataType {
             public bool AutoChannelChat { get; set; } = false;
             public bool Whispers { get; set; } = true;
         }

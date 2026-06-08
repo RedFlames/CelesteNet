@@ -162,7 +162,7 @@ namespace Celeste.Mod.CelesteNet.Server.Chat.Cmd {
 
     }
 
-    public class TPSettings {
+    public class TPSettings : IUserDataType {
         public bool Enabled { get; set; } = true;
     }
 

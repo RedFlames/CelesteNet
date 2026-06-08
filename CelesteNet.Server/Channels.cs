@@ -256,7 +256,7 @@ namespace Celeste.Mod.CelesteNet.Server {
         }
     }
 
-    public class LastChannelUserInfo {
+    public class LastChannelUserInfo : IUserDataType {
         public string Name = "main";
     }
 }
